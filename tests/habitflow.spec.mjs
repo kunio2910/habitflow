@@ -79,6 +79,50 @@ test("xóa thói quen và giữ trạng thái sau khi tải lại", async ({ pag
   await expect(page.getByText("Uống 2 lít nước", { exact: true })).toHaveCount(0);
 });
 
+test("chỉnh sửa thói quen và lưu thay đổi", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Thói quen", exact: true }).click();
+  await page.getByRole("button", { name: "Tùy chọn Uống 2 lít nước" }).click();
+  await page.getByRole("button", { name: "Chỉnh sửa", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Chỉnh sửa thói quen", exact: true })).toBeVisible();
+  const nameInput=page.getByPlaceholder("Ví dụ: Đọc sách 20 trang");
+  await nameInput.fill("Uống 3 lít nước");
+  await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+  await expect(page.getByText("Uống 3 lít nước", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.locator("aside nav").getByRole("button", { name: "Thói quen", exact: true }).click();
+  await expect(page.getByText("Uống 3 lít nước", { exact: true })).toBeVisible();
+});
+
+test("chỉnh sửa và xóa mục tiêu", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Mục tiêu", exact: true }).click();
+  await page.getByRole("button", { name: "Tùy chọn mục tiêu Đọc 12 cuốn sách trong năm" }).click();
+  await page.getByRole("button", { name: "Chỉnh sửa", exact: true }).click();
+  const goalInput=page.getByPlaceholder("Ví dụ: Chạy 100km trong tháng");
+  await goalInput.fill("Đọc 15 cuốn sách trong năm");
+  await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+  await expect(page.getByText("Đọc 15 cuốn sách trong năm", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Tùy chọn mục tiêu Đọc 15 cuốn sách trong năm" }).click();
+  await page.getByRole("button", { name: "Xóa mục tiêu", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Xóa mục tiêu?" })).toBeVisible();
+  await page.getByRole("button", { name: "Xóa", exact: true }).click();
+  await expect(page.locator(".goal-card")).toHaveCount(4);
+  await page.reload();
+  await page.locator("aside nav").getByRole("button", { name: "Mục tiêu", exact: true }).click();
+  await expect(page.locator(".goal-card")).toHaveCount(4);
+});
+
+test("chỉnh sửa ghi chú và lưu qua reload", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Ghi chú", exact: true }).click();
+  await page.getByRole("button", { name: "Chỉnh sửa ghi chú Điều mình biết ơn hôm nay" }).click();
+  await page.getByPlaceholder("Tiêu đề ghi chú").fill("Điều tuyệt vời hôm nay");
+  await page.getByPlaceholder("Viết điều bạn muốn ghi nhớ...").fill("Đã hoàn thành toàn bộ kế hoạch buổi sáng.");
+  await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+  await expect(page.getByText("Điều tuyệt vời hôm nay", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.locator("aside nav").getByRole("button", { name: "Ghi chú", exact: true }).click();
+  await expect(page.getByText("Điều tuyệt vời hôm nay", { exact: true })).toBeVisible();
+});
+
 test("giao diện tối và trạng thái thành tựu được ghi nhớ", async ({ page }) => {
   await page.locator("aside nav").getByRole("button", { name: "Cài đặt", exact: true }).click();
   await page.getByRole("button", { name: "Chuyển tối" }).click();

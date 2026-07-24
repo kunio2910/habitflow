@@ -188,7 +188,7 @@ function CategoryDonut() {
   return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
-function HabitsView({ habits, openAdd, onDelete, query = "" }) {
+function HabitsView({ habits, openAdd, onEdit, onDelete, query = "" }) {
   const [tab, setTab] = useState("Tất cả");
   const [menuId,setMenuId]=useState(null);
   const [pendingDelete,setPendingDelete]=useState(null);
@@ -202,22 +202,31 @@ function HabitsView({ habits, openAdd, onDelete, query = "" }) {
       <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
       <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
       <div className="habit-actions"><button aria-label={`Tùy chọn ${h.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===h.id?null:h.id)}><MoreVertical/></button>
-        {menuId===h.id&&<div className="action-popover"><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
+        {menuId===h.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onEdit(h);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
       </div>
     </div>)}{filtered.length===0&&<div className="empty-state card"><Search/><h3>Không tìm thấy thói quen</h3><p>Thử một từ khóa khác hoặc tạo thói quen mới.</p></div>}</div>
     {pendingDelete&&<div className="modal-backdrop" onMouseDown={()=>setPendingDelete(null)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><Trash2/></span><h2>Xóa thói quen?</h2><p>“{pendingDelete.name}” sẽ bị xóa khỏi danh sách và dữ liệu trên trình duyệt.</p><div><button className="secondary" onClick={()=>setPendingDelete(null)}>Hủy</button><button className="delete-button" onClick={()=>{onDelete(pendingDelete.id);setPendingDelete(null)}}><Trash2/> Xóa</button></div></div></div>}
   </>;
 }
 
-function AddHabitView({ onBack, onSave }) {
-  const [form, setForm] = useState({ name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", time:"Buổi sáng", reminder:true, goal:"Số lượng", amount:"1" });
+function AddHabitView({ onBack, onSave, initialHabit }) {
+  const [form, setForm] = useState(initialHabit ? {
+    name:initialHabit.name,
+    note:initialHabit.note||"",
+    category:initialHabit.category||"Sức khỏe",
+    frequency:initialHabit.frequency||"Hàng ngày",
+    time:initialHabit.period==="Cả ngày"?"Buổi sáng":initialHabit.period.startsWith("Buổi")?initialHabit.period:`Buổi ${initialHabit.period.toLowerCase()}`,
+    reminder:initialHabit.reminder??true,
+    goal:initialHabit.goal||"Số lượng",
+    amount:initialHabit.amount||"1"
+  } : { name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", time:"Buổi sáng", reminder:true, goal:"Số lượng", amount:"1" });
   const set = (key, value) => setForm({...form,[key]:value});
   const categories = [["Sức khỏe",HeartPulse],["Học tập",BookOpen],["Phát triển bản thân",UserRound],["Công việc",BriefcaseBusiness],["Khác",Grid2X2]];
   return <div className="form-page">
-    <button className="back-btn" onClick={onBack}><ArrowLeft/> Thêm thói quen</button>
+    <button className="back-btn" onClick={onBack}><ArrowLeft/> {initialHabit?"Chỉnh sửa thói quen":"Thêm thói quen"}</button>
     <div className="form-card card">
-      <h2>Thêm thói quen mới</h2>
-      <p className="form-intro">Thiết lập một thói quen phù hợp với nhịp sống của bạn.</p>
+      <h2>{initialHabit?"Chỉnh sửa thói quen":"Thêm thói quen mới"}</h2>
+      <p className="form-intro">{initialHabit?"Cập nhật thông tin và lịch thực hiện của thói quen.":"Thiết lập một thói quen phù hợp với nhịp sống của bạn."}</p>
       <label>Tên thói quen<input value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Ví dụ: Đọc sách 20 trang"/></label>
       <label>Mô tả (tùy chọn)<input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ghi chú thêm về thói quen này..."/></label>
       <fieldset><legend>Danh mục</legend><div className="category-picks">{categories.map(([name,I])=><button type="button" onClick={()=>set("category",name)} className={form.category===name?"selected":""} key={name}><I/><span>{name}</span></button>)}</div></fieldset>
@@ -225,7 +234,7 @@ function AddHabitView({ onBack, onSave }) {
       <fieldset><legend>Thời gian</legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>set("time",a)} className={form.time===a?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small></button>)}</div></fieldset>
       <div className="form-split"><label>Nhắc nhở<span className="switch-line"><input type="time" defaultValue="08:00"/><button type="button" className={form.reminder?"switch on":"switch"} onClick={()=>set("reminder",!form.reminder)}><i/></button></span></label><label>Ngày bắt đầu<input type="date" defaultValue="2026-07-24"/></label></div>
       <fieldset><legend>Mục tiêu</legend><div className="goal-options">{["Không có mục tiêu","Số lượng","Thời gian"].map(x=><label key={x}><input type="radio" checked={form.goal===x} onChange={()=>set("goal",x)}/>{x}{x===form.goal&&x!=="Không có mục tiêu"&&<><input className="mini-input" value={form.amount} onChange={e=>set("amount",e.target.value)}/><span>{x==="Thời gian"?"phút":"lần"}</span></>}</label>)}</div></fieldset>
-      <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&onSave(form)}><Save/> Lưu thói quen</button></div>
+      <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&onSave(form)}><Save/> {initialHabit?"Lưu thay đổi":"Lưu thói quen"}</button></div>
     </div>
   </div>;
 }
@@ -277,13 +286,16 @@ function StatisticsView() {
   </>;
 }
 
-function GoalsView({ goals, openGoal }) {
+function GoalsView({ goals, openGoal, onEdit, onDelete }) {
   const [tab,setTab]=useState("Đang thực hiện");
+  const [menuId,setMenuId]=useState(null);
+  const [pendingDelete,setPendingDelete]=useState(null);
   return <>
     <PageTitle title="Mục tiêu của tôi" text="Biến những mong muốn lớn thành tiến bộ nhỏ mỗi ngày." action={<button className="primary" onClick={openGoal}><Plus/> Thêm mục tiêu</button>}/>
     <div className="page-tabs"><button className={tab==="Đang thực hiện"?"active":""} onClick={()=>setTab("Đang thực hiện")}>Đang thực hiện ({goals.length})</button><button className={tab==="Đã hoàn thành"?"active":""} onClick={()=>setTab("Đã hoàn thành")}>Đã hoàn thành (3)</button></div>
-    {tab==="Đang thực hiện"?<div className="goal-list">{goals.map(g=><div className="goal-card card" key={g.id}><HabitIcon icon={g.icon} color={g.color}/><div><div className="goal-title"><strong>{g.name}</strong><button className="ghost-icon"><MoreVertical/></button></div><span>Tiến độ <b>{g.value}</b></span><div className="goal-progress"><i style={{width:`${g.progress}%`}}/></div><footer><span>Hạn: {g.due}</span><b>{g.progress}%</b></footer></div></div>)}</div>:<div className="empty-state card"><Trophy/><h3>3 mục tiêu đã hoàn thành</h3><p>Bạn đang làm rất tốt. Hãy tiếp tục chinh phục mục tiêu tiếp theo!</p></div>}
+    {tab==="Đang thực hiện"?<div className="goal-list">{goals.map(g=><div className="goal-card card" key={g.id}><HabitIcon icon={g.icon} color={g.color}/><div><div className="goal-title"><strong>{g.name}</strong><div className="habit-actions"><button aria-label={`Tùy chọn mục tiêu ${g.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===g.id?null:g.id)}><MoreVertical/></button>{menuId===g.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onEdit(g);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(g);setMenuId(null)}}><Trash2/> Xóa mục tiêu</button></div>}</div></div><span>Tiến độ <b>{g.value}</b></span><div className="goal-progress"><i style={{width:`${g.progress}%`}}/></div><footer><span>Hạn: {g.due}</span><b>{g.progress}%</b></footer></div></div>)}</div>:<div className="empty-state card"><Trophy/><h3>3 mục tiêu đã hoàn thành</h3><p>Bạn đang làm rất tốt. Hãy tiếp tục chinh phục mục tiêu tiếp theo!</p></div>}
     <div className="suggestions"><h3>Gợi ý mục tiêu cho bạn</h3>{["Thiền 30 ngày","Học 1000 từ vựng","Chạy 100km","Giảm 5kg","Ngủ trước 22:00 trong 30 ngày"].map(x=><button key={x}>{x}</button>)}</div>
+    {pendingDelete&&<div className="modal-backdrop" onMouseDown={()=>setPendingDelete(null)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><Trash2/></span><h2>Xóa mục tiêu?</h2><p>“{pendingDelete.name}” và tiến độ hiện tại sẽ bị xóa.</p><div><button className="secondary" onClick={()=>setPendingDelete(null)}>Hủy</button><button className="delete-button" onClick={()=>{onDelete(pendingDelete.id);setPendingDelete(null)}}><Trash2/> Xóa</button></div></div></div>}
   </>;
 }
 
@@ -318,19 +330,30 @@ function AchievementsView({ unlockedIds, onReset }) {
 }
 
 function NotesView({ notes, setNotes, notify }) {
-  const [editing,setEditing]=useState(false);
+  const [editingNote,setEditingNote]=useState(null);
   const [title,setTitle]=useState("");
   const [body,setBody]=useState("");
-  const addNote=e=>{
+  const openEditor=note=>{
+    setEditingNote(note||{id:null});
+    setTitle(note?.title||"");
+    setBody(note?.body||"");
+  };
+  const saveNote=e=>{
     e.preventDefault();
     if(!title.trim()) return;
-    setNotes([{id:Date.now(),title:title.trim(),body:body.trim()||"Chưa có nội dung.",date:"24/07/2026",color:"purple"},...notes]);
-    setTitle("");setBody("");setEditing(false);notify("Đã tạo ghi chú mới");
+    if(editingNote?.id){
+      setNotes(notes.map(n=>n.id===editingNote.id?{...n,title:title.trim(),body:body.trim()||"Chưa có nội dung."}:n));
+      notify("Đã cập nhật ghi chú");
+    }else{
+      setNotes([{id:Date.now(),title:title.trim(),body:body.trim()||"Chưa có nội dung.",date:"24/07/2026",color:"purple"},...notes]);
+      notify("Đã tạo ghi chú mới");
+    }
+    setTitle("");setBody("");setEditingNote(null);
   };
   return <>
-    <PageTitle title="Ghi chú" text="Ghi lại suy nghĩ và những điều bạn học được mỗi ngày." action={<button className="primary" onClick={()=>setEditing(true)}><Plus/> Tạo ghi chú</button>}/>
-    <div className="notes-grid">{notes.map(n=><article className={`note-card card ${n.color}`} key={n.id}><div><PencilLine/><span>{n.date}</span></div><h3>{n.title}</h3><p>{n.body}</p><button aria-label="Xóa ghi chú" onClick={()=>{setNotes(notes.filter(x=>x.id!==n.id));notify("Đã xóa ghi chú")}}><Trash2/></button></article>)}</div>
-    {editing&&<div className="modal-backdrop" onMouseDown={()=>setEditing(false)}><form className="modal" onSubmit={addNote} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={()=>setEditing(false)}><X/></button><span className="modal-icon"><PencilLine/></span><h2>Tạo ghi chú</h2><p>Lưu lại một suy nghĩ, bài học hoặc kế hoạch nhỏ.</p><label>Tiêu đề<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Tiêu đề ghi chú"/></label><label>Nội dung<textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Viết điều bạn muốn ghi nhớ..."/></label><button className="primary wide" type="submit">Lưu ghi chú</button></form></div>}
+    <PageTitle title="Ghi chú" text="Ghi lại suy nghĩ và những điều bạn học được mỗi ngày." action={<button className="primary" onClick={()=>openEditor(null)}><Plus/> Tạo ghi chú</button>}/>
+    <div className="notes-grid">{notes.map(n=><article className={`note-card card ${n.color}`} key={n.id}><div className="note-meta"><PencilLine/><span>{n.date}</span></div><h3>{n.title}</h3><p>{n.body}</p><div className="note-actions"><button aria-label={`Chỉnh sửa ghi chú ${n.title}`} onClick={()=>openEditor(n)}><PencilLine/></button><button aria-label={`Xóa ghi chú ${n.title}`} onClick={()=>{setNotes(notes.filter(x=>x.id!==n.id));notify("Đã xóa ghi chú")}}><Trash2/></button></div></article>)}</div>
+    {editingNote&&<div className="modal-backdrop" onMouseDown={()=>setEditingNote(null)}><form className="modal" onSubmit={saveNote} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={()=>setEditingNote(null)}><X/></button><span className="modal-icon"><PencilLine/></span><h2>{editingNote.id?"Chỉnh sửa ghi chú":"Tạo ghi chú"}</h2><p>{editingNote.id?"Cập nhật nội dung bạn muốn ghi nhớ.":"Lưu lại một suy nghĩ, bài học hoặc kế hoạch nhỏ."}</p><label>Tiêu đề<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Tiêu đề ghi chú"/></label><label>Nội dung<textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Viết điều bạn muốn ghi nhớ..."/></label><button className="primary wide" type="submit">{editingNote.id?"Lưu thay đổi":"Lưu ghi chú"}</button></form></div>}
   </>;
 }
 
@@ -348,9 +371,18 @@ function SettingsView({ resetData, notify, theme, toggleTheme }) {
   </>;
 }
 
-function GoalModal({ close, save }) {
-  const [name,setName]=useState("");
-  return <div className="modal-backdrop" onMouseDown={close}><form className="modal" onSubmit={e=>{e.preventDefault();name.trim()&&save(name)}} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={close}><X/></button><span className="modal-icon"><Flag/></span><h2>Thêm mục tiêu mới</h2><p>Đặt một cột mốc rõ ràng để duy trì động lực.</p><label>Tên mục tiêu<input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="Ví dụ: Chạy 100km trong tháng"/></label><label>Hạn hoàn thành<input type="date" defaultValue="2026-12-31"/></label><button className="primary wide" type="submit">Tạo mục tiêu</button></form></div>;
+function GoalModal({ close, save, goal }) {
+  const [name,setName]=useState(goal?.name||"");
+  const [value,setValue]=useState(goal?.value||"0 / 100");
+  const [progress,setProgress]=useState(goal?.progress||0);
+  const [due,setDue]=useState(goal?.due?goal.due.split("/").reverse().join("-"):"2026-12-31");
+  const submit=e=>{
+    e.preventDefault();
+    if(!name.trim())return;
+    const formattedDue=due.split("-").reverse().join("/");
+    save({name:name.trim(),value:value.trim()||"0 / 100",progress:Math.min(100,Math.max(0,Number(progress)||0)),due:formattedDue});
+  };
+  return <div className="modal-backdrop" onMouseDown={close}><form className="modal" onSubmit={submit} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={close}><X/></button><span className="modal-icon"><Flag/></span><h2>{goal?"Chỉnh sửa mục tiêu":"Thêm mục tiêu mới"}</h2><p>{goal?"Cập nhật cột mốc và tiến độ hiện tại.":"Đặt một cột mốc rõ ràng để duy trì động lực."}</p><label>Tên mục tiêu<input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="Ví dụ: Chạy 100km trong tháng"/></label><div className="modal-split"><label>Kết quả hiện tại<input value={value} onChange={e=>setValue(e.target.value)} placeholder="Ví dụ: 36 / 100 km"/></label><label>Tiến độ (%)<input type="number" min="0" max="100" value={progress} onChange={e=>setProgress(e.target.value)}/></label></div><label>Hạn hoàn thành<input type="date" value={due} onChange={e=>setDue(e.target.value)}/></label><button className="primary wide" type="submit">{goal?"Lưu thay đổi":"Tạo mục tiêu"}</button></form></div>;
 }
 
 export default function Home() {
@@ -361,8 +393,10 @@ export default function Home() {
   const [theme,setTheme]=useState("light");
   const [selectedDay,setSelectedDay]=useState(24);
   const [view, setView] = useState("Tổng quan");
+  const [editingHabit,setEditingHabit]=useState(null);
   const [mobile, setMobile] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
+  const [editingGoal,setEditingGoal]=useState(null);
   const [query,setQuery]=useState("");
   const [toast,setToast]=useState("");
   const [hydrated,setHydrated]=useState(false);
@@ -404,11 +438,19 @@ export default function Home() {
   const notify=message=>setToast(message);
   const toggle = id => {setHabits(habits.map(h => h.id === id ? {...h, done: !h.done, progress: h.done ? 0 : 100, detail: h.done ? "Chưa thực hiện" : "Đã hoàn thành"} : h));notify("Đã cập nhật tiến độ")};
   const navigate = label => { setView(label); setMobile(false); };
-  const addHabit = form => {
+  const saveHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
     const [icon,color] = categoryMap[form.category] || ["journal","slate"];
-    setHabits([...habits,{id:Date.now(),name:form.name,detail:"Chưa thực hiện",icon,color,progress:0,done:false,period:form.time.replace("Buổi ",""),streak:0,rate:0,category:form.category}]);
-    notify("Đã thêm thói quen mới");
+    const rawPeriod=form.time.replace("Buổi ","");
+    const period=rawPeriod.charAt(0).toUpperCase()+rawPeriod.slice(1);
+    if(editingHabit){
+      setHabits(habits.map(h=>h.id===editingHabit.id?{...h,...form,name:form.name.trim(),icon,color,period,category:form.category}:h));
+      notify("Đã cập nhật thói quen");
+    } else {
+      setHabits([...habits,{id:Date.now(),...form,name:form.name.trim(),detail:"Chưa thực hiện",icon,color,progress:0,done:false,period,streak:0,rate:0,category:form.category}]);
+      notify("Đã thêm thói quen mới");
+    }
+    setEditingHabit(null);
     setView("Thói quen");
   };
   const deleteHabit=id=>{
@@ -422,16 +464,27 @@ export default function Home() {
   };
   const resetAchievements=()=>{setUnlockedAchievements([]);notify("Đã đặt lại toàn bộ thành tựu")};
   const selectDate=day=>{setSelectedDay(day);setView("Chi tiết ngày")};
+  const saveGoal=data=>{
+    if(editingGoal){
+      setGoals(goals.map(g=>g.id===editingGoal.id?{...g,...data}:g));
+      notify("Đã cập nhật mục tiêu");
+    }else{
+      setGoals([...goals,{id:Date.now(),...data,icon:"book",color:"purple"}]);
+      notify("Đã thêm mục tiêu mới");
+    }
+    setEditingGoal(null);setGoalModal(false);
+  };
+  const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} toggle={toggle} openAdd={()=>setView("Thêm thói quen")} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} toggle={toggle} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
-  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>setView("Thêm thói quen")} onDelete={deleteHabit}/>;
-  else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>setView("Thói quen")} onSave={addHabit}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onDelete={deleteHabit}/>;
+  else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
   else if(view==="Lịch") content=<CalendarView habits={habits}/>;
   else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
   else if(view==="Thống kê") content=<StatisticsView/>;
-  else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>setGoalModal(true)}/>;
+  else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
   else if(view==="Thành tựu") content=<AchievementsView unlockedIds={unlockedAchievements} onReset={resetAchievements}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
   else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}}/>;
@@ -451,7 +504,7 @@ export default function Home() {
       </header>
       <div className="view-shell">{content}</div>
     </main>
-    {goalModal&&<GoalModal close={()=>setGoalModal(false)} save={name=>{setGoals([...goals,{id:Date.now(),name,icon:"book",color:"purple",progress:0,value:"0 / 100",due:"31/12/2026"}]);setGoalModal(false);notify("Đã thêm mục tiêu mới")}}/>}
+    {goalModal&&<GoalModal close={()=>{setGoalModal(false);setEditingGoal(null)}} save={saveGoal} goal={editingGoal}/>}
     {toast&&<div className="toast"><CircleCheckBig/>{toast}</div>}
   </div>;
 }
