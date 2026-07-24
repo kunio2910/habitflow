@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "vinext build && node scripts/prepare-sites.mjs",
-    "start": "vinext start"
+    "start": "vinext start",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
@@ -15,6 +16,7 @@
     "vinext": "^1.0.0-beta.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@vitejs/plugin-rsc": "^0.5.30"
   }
 }

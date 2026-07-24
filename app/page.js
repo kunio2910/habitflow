@@ -8,7 +8,8 @@ import {
   Trophy, Target, X, Menu, Search, Sparkles, SlidersHorizontal, Goal,
   Medal, StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
   UserRound, Grid2X2, CalendarCheck, Save, LockKeyhole, Award, Timer,
-  CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine
+  CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
+  Database, Palette, Volume2, Trash2
 } from "lucide-react";
 
 const seedHabits = [
@@ -19,15 +20,26 @@ const seedHabits = [
   { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", streak: 3, rate: 57, category: "Học tập" },
   { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", streak: 0, rate: 0, category: "Phát triển bản thân" },
   { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", streak: 0, rate: 28, category: "Sức khỏe" },
-  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 7, rate: 43, category: "Sức khỏe" }
+  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 7, rate: 43, category: "Sức khỏe" },
+  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", streak: 9, rate: 82, category: "Sức khỏe" },
+  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", streak: 6, rate: 74, category: "Học tập" }
 ];
 
 const goalsSeed = [
   { id: 1, name: "Đọc 12 cuốn sách trong năm", icon: "book", color: "orange", progress: 50, value: "6 / 12 cuốn", due: "31/12/2026" },
   { id: 2, name: "Tập thể dục 30 ngày liên tiếp", icon: "sport", color: "green", progress: 50, value: "15 / 30 ngày", due: "15/08/2026" },
   { id: 3, name: "Uống đủ 2 lít nước mỗi ngày trong 90 ngày", icon: "water", color: "blue", progress: 50, value: "45 / 90 ngày", due: "22/09/2026" },
-  { id: 4, name: "Tiết kiệm 20 triệu đồng", icon: "language", color: "yellow", progress: 63, value: "12.500.000 / 20.000.000 đ", due: "31/12/2026" }
+  { id: 4, name: "Tiết kiệm 20 triệu đồng", icon: "language", color: "yellow", progress: 63, value: "12.500.000 / 20.000.000 đ", due: "31/12/2026" },
+  { id: 5, name: "Chạy 100km trong tháng", icon: "sport", color: "purple", progress: 36, value: "36 / 100 km", due: "31/07/2026" }
 ];
+
+const notesSeed = [
+  { id: 1, title: "Điều mình biết ơn hôm nay", body: "Có một buổi sáng yên tĩnh, hoàn thành bài tập và đọc được 20 trang sách.", date: "24/07/2026", color: "purple" },
+  { id: 2, title: "Bài học sau 7 ngày", body: "Chuẩn bị quần áo tập từ tối hôm trước giúp mình bắt đầu dễ dàng hơn.", date: "23/07/2026", color: "green" },
+  { id: 3, title: "Kế hoạch cuối tuần", body: "Đi bộ ở công viên, tổng kết tuần và chọn cuốn sách tiếp theo.", date: "22/07/2026", color: "orange" }
+];
+
+const SAMPLE_VERSION = "habitflow-sample-v2";
 
 const IconMap = {
   water: Droplets, sport: Dumbbell, book: BookOpen, brain: Brain,
@@ -53,7 +65,7 @@ function Ring({ value, size = 54 }) {
 }
 
 function StatCard({ label, value, sub, icon: Icon, tone, ring, delta }) {
-  return <div className="stat card"><div><p>{label}</p><strong>{value}</strong><small>{sub} {delta && <em>{delta}</em>}</small></div>{ring !== undefined ? <Ring value={ring} /> : <div className={`stat-icon ${tone}`}><Icon /></div>}</div>;
+  return <div className="stat card"><div><p>{label}</p><strong>{value}</strong><small>{sub} {delta && <em>{delta}</em>}</small></div>{ring !== undefined ? <Ring value={ring} /> : Icon ? <div className={`stat-icon ${tone}`}><Icon /></div> : null}</div>;
 }
 
 function PageTitle({ eyebrow, title, text, action }) {
@@ -153,18 +165,19 @@ function CategoryDonut() {
   return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
-function HabitsView({ habits, openAdd }) {
+function HabitsView({ habits, openAdd, query = "" }) {
   const [tab, setTab] = useState("Tất cả");
   const labels = ["Tất cả", "Buổi sáng", "Buổi chiều", "Buổi tối"];
-  const filtered = tab === "Tất cả" ? habits : habits.filter(h => h.period.toLowerCase().includes(tab.replace("Buổi ","").toLowerCase()));
+  const byTime = tab === "Tất cả" ? habits : habits.filter(h => h.period.toLowerCase().includes(tab.replace("Buổi ","").toLowerCase()));
+  const filtered = byTime.filter(h => h.name.toLowerCase().includes(query.trim().toLowerCase()));
   return <>
-    <PageTitle title="Thói quen của tôi" text="Quản lý và theo dõi tất cả thói quen của bạn." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <PageTitle title="Thói quen của tôi" text={query ? `Tìm thấy ${filtered.length} kết quả cho “${query}”.` : "Quản lý và theo dõi tất cả thói quen của bạn."} action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <div className="page-tabs">{labels.map(x=><button className={tab===x?"active":""} key={x} onClick={()=>setTab(x)}>{x} <span>{x==="Tất cả"?`(${habits.length})`:""}</span></button>)}</div>
     <div className="habit-cards">{filtered.map(h=><div className="habit-card card" key={h.id}>
       <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
       <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
       <button className="ghost-icon"><MoreVertical/></button>
-    </div>)}</div>
+    </div>)}{filtered.length===0&&<div className="empty-state card"><Search/><h3>Không tìm thấy thói quen</h3><p>Thử một từ khóa khác hoặc tạo thói quen mới.</p></div>}</div>
   </>;
 }
 
@@ -269,9 +282,35 @@ function AchievementsView() {
   </>;
 }
 
-function SimpleView({ type }) {
-  const Icon = type==="Ghi chú"?PencilLine:Settings;
-  return <><PageTitle title={type} text={type==="Ghi chú"?"Ghi lại suy nghĩ và những điều bạn học được mỗi ngày.":"Tùy chỉnh trải nghiệm HabitFlow của bạn."}/><div className="simple-card card"><Icon/><h2>{type==="Ghi chú"?"Không gian ghi chú của bạn":"Cài đặt cá nhân"}</h2><p>{type==="Ghi chú"?"Tạo ghi chú đầu tiên để lưu lại hành trình xây dựng thói quen.":"Điều chỉnh thông báo, ngôn ngữ và giao diện theo sở thích."}</p><button className="primary"><Plus/>{type==="Ghi chú"?" Tạo ghi chú":" Thiết lập"}</button></div></>;
+function NotesView({ notes, setNotes, notify }) {
+  const [editing,setEditing]=useState(false);
+  const [title,setTitle]=useState("");
+  const [body,setBody]=useState("");
+  const addNote=e=>{
+    e.preventDefault();
+    if(!title.trim()) return;
+    setNotes([{id:Date.now(),title:title.trim(),body:body.trim()||"Chưa có nội dung.",date:"24/07/2026",color:"purple"},...notes]);
+    setTitle("");setBody("");setEditing(false);notify("Đã tạo ghi chú mới");
+  };
+  return <>
+    <PageTitle title="Ghi chú" text="Ghi lại suy nghĩ và những điều bạn học được mỗi ngày." action={<button className="primary" onClick={()=>setEditing(true)}><Plus/> Tạo ghi chú</button>}/>
+    <div className="notes-grid">{notes.map(n=><article className={`note-card card ${n.color}`} key={n.id}><div><PencilLine/><span>{n.date}</span></div><h3>{n.title}</h3><p>{n.body}</p><button aria-label="Xóa ghi chú" onClick={()=>{setNotes(notes.filter(x=>x.id!==n.id));notify("Đã xóa ghi chú")}}><Trash2/></button></article>)}</div>
+    {editing&&<div className="modal-backdrop" onMouseDown={()=>setEditing(false)}><form className="modal" onSubmit={addNote} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={()=>setEditing(false)}><X/></button><span className="modal-icon"><PencilLine/></span><h2>Tạo ghi chú</h2><p>Lưu lại một suy nghĩ, bài học hoặc kế hoạch nhỏ.</p><label>Tiêu đề<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Tiêu đề ghi chú"/></label><label>Nội dung<textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Viết điều bạn muốn ghi nhớ..."/></label><button className="primary wide" type="submit">Lưu ghi chú</button></form></div>}
+  </>;
+}
+
+function SettingsView({ resetData, notify }) {
+  const [reminders,setReminders]=useState(true);
+  const [sounds,setSounds]=useState(false);
+  return <>
+    <PageTitle title="Cài đặt" text="Tùy chỉnh trải nghiệm HabitFlow của bạn."/>
+    <div className="settings-grid">
+      <section className="settings-card card"><div className="settings-icon purple"><Bell/></div><div><h3>Nhắc nhở thói quen</h3><p>Nhận thông báo theo lịch bạn đã thiết lập.</p></div><button className={reminders?"switch on":"switch"} onClick={()=>{setReminders(!reminders);notify(`Đã ${reminders?"tắt":"bật"} nhắc nhở`)}}><i/></button></section>
+      <section className="settings-card card"><div className="settings-icon blue"><Volume2/></div><div><h3>Âm thanh hoàn thành</h3><p>Phát âm thanh nhỏ khi bạn hoàn thành thói quen.</p></div><button className={sounds?"switch on":"switch"} onClick={()=>{setSounds(!sounds);notify(`Đã ${sounds?"tắt":"bật"} âm thanh`)}}><i/></button></section>
+      <section className="settings-card card"><div className="settings-icon orange"><Palette/></div><div><h3>Giao diện</h3><p>Chế độ sáng đang được sử dụng.</p></div><button className="secondary" onClick={()=>notify("Chế độ sáng đang được sử dụng")}>Mặc định</button></section>
+      <section className="settings-card card reset-card"><div className="settings-icon green"><Database/></div><div><h3>Dữ liệu thử nghiệm</h3><p>Khôi phục toàn bộ thói quen, mục tiêu và ghi chú mẫu.</p></div><button className="secondary danger" onClick={resetData}><RotateCcw/> Khôi phục</button></section>
+    </div>
+  </>;
 }
 
 function GoalModal({ close, save }) {
@@ -282,36 +321,68 @@ function GoalModal({ close, save }) {
 export default function Home() {
   const [habits, setHabits] = useState(seedHabits);
   const [goals, setGoals] = useState(goalsSeed);
+  const [notes, setNotes] = useState(notesSeed);
   const [view, setView] = useState("Tổng quan");
   const [mobile, setMobile] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
+  const [query,setQuery]=useState("");
+  const [toast,setToast]=useState("");
+  const [hydrated,setHydrated]=useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("habitflow-habits");
-    if (saved) setHabits(JSON.parse(saved));
+    const read=(key,fallback)=>{
+      try {
+        const value=JSON.parse(localStorage.getItem(key));
+        return Array.isArray(value)?value:fallback;
+      } catch { return fallback; }
+    };
+    const existingHabits=read("habitflow-habits",seedHabits);
+    if(localStorage.getItem("habitflow-sample-version")!==SAMPLE_VERSION){
+      const ids=new Set(existingHabits.map(h=>h.id));
+      setHabits([...existingHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
+      localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
+    } else setHabits(existingHabits);
+    setGoals(read("habitflow-goals",goalsSeed));
+    setNotes(read("habitflow-notes",notesSeed));
+    setHydrated(true);
   }, []);
-  useEffect(() => { localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits]);
+  useEffect(() => { if(hydrated)localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits,hydrated]);
+  useEffect(() => { if(hydrated)localStorage.setItem("habitflow-goals", JSON.stringify(goals)); }, [goals,hydrated]);
+  useEffect(() => { if(hydrated)localStorage.setItem("habitflow-notes", JSON.stringify(notes)); }, [notes,hydrated]);
   useEffect(() => { window.scrollTo({top:0,behavior:"smooth"}); }, [view]);
+  useEffect(() => {
+    if(!toast)return;
+    const timer=setTimeout(()=>setToast(""),2200);
+    return()=>clearTimeout(timer);
+  },[toast]);
 
-  const toggle = id => setHabits(habits.map(h => h.id === id ? {...h, done: !h.done, progress: h.done ? 0 : 100, detail: h.done ? "Chưa thực hiện" : "Đã hoàn thành"} : h));
-  const navigate = label => { setView(label==="Hôm nay"?"Tổng quan":label); setMobile(false); };
+  const notify=message=>setToast(message);
+  const toggle = id => {setHabits(habits.map(h => h.id === id ? {...h, done: !h.done, progress: h.done ? 0 : 100, detail: h.done ? "Chưa thực hiện" : "Đã hoàn thành"} : h));notify("Đã cập nhật tiến độ")};
+  const navigate = label => { setView(label); setMobile(false); };
   const addHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
     const [icon,color] = categoryMap[form.category] || ["journal","slate"];
     setHabits([...habits,{id:Date.now(),name:form.name,detail:"Chưa thực hiện",icon,color,progress:0,done:false,period:form.time.replace("Buổi ",""),streak:0,rate:0,category:form.category}]);
+    notify("Đã thêm thói quen mới");
     setView("Thói quen");
+  };
+  const resetData=()=>{
+    setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);
+    localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
+    notify("Đã khôi phục dữ liệu mẫu");
   };
 
   let content;
-  if(view==="Tổng quan") content=<Overview habits={habits} toggle={toggle} openAdd={()=>setView("Thêm thói quen")} setView={setView}/>;
-  else if(view==="Thói quen") content=<HabitsView habits={habits} openAdd={()=>setView("Thêm thói quen")}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} toggle={toggle} openAdd={()=>setView("Thêm thói quen")} setView={setView}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>setView("Thêm thói quen")}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>setView("Thói quen")} onSave={addHabit}/>;
   else if(view==="Lịch") content=<CalendarView habits={habits}/>;
   else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
   else if(view==="Thống kê") content=<StatisticsView/>;
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>setGoalModal(true)}/>;
   else if(view==="Thành tựu") content=<AchievementsView/>;
-  else content=<SimpleView type={view}/>;
+  else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
+  else content=<SettingsView resetData={resetData} notify={notify}/>;
 
   return <div className="app">
     <aside className={mobile ? "sidebar open" : "sidebar"}>
@@ -322,12 +393,13 @@ export default function Home() {
     {mobile && <div className="scrim" onClick={()=>setMobile(false)}/>}
     <main>
       <header>
-        <button className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
-        <div className="search"><Search/><input placeholder="Tìm thói quen..."/></div>
-        <button className="icon-btn"><Bell/></button>
+        <button aria-label="Mở menu" className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
+        <div className="search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&setView("Thói quen")} placeholder="Tìm thói quen..."/>{query&&<button aria-label="Xóa tìm kiếm" onClick={()=>setQuery("")}><X/></button>}</div>
+        <button aria-label="Thông báo" className="icon-btn"><Bell/></button>
       </header>
       <div className="view-shell">{content}</div>
     </main>
-    {goalModal&&<GoalModal close={()=>setGoalModal(false)} save={name=>{setGoals([...goals,{id:Date.now(),name,icon:"book",color:"purple",progress:0,value:"0 / 100",due:"31/12/2026"}]);setGoalModal(false)}}/>}
+    {goalModal&&<GoalModal close={()=>setGoalModal(false)} save={name=>{setGoals([...goals,{id:Date.now(),name,icon:"book",color:"purple",progress:0,value:"0 / 100",due:"31/12/2026"}]);setGoalModal(false);notify("Đã thêm mục tiêu mới")}}/>}
+    {toast&&<div className="toast"><CircleCheckBig/>{toast}</div>}
   </div>;
 }
