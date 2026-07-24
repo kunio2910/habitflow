@@ -64,6 +64,21 @@ test("thêm mục tiêu và ghi chú mẫu hoạt động", async ({ page }) => 
   await expect(page.getByText("Ghi chú kiểm thử", { exact: true })).toBeVisible();
 });
 
+test("xóa thói quen và giữ trạng thái sau khi tải lại", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Thói quen", exact: true }).click();
+  await expect(page.locator(".habit-card")).toHaveCount(10);
+  await page.getByRole("button", { name: "Tùy chọn Uống 2 lít nước" }).click();
+  await page.getByRole("button", { name: "Xóa thói quen" }).click();
+  await expect(page.getByRole("heading", { name: "Xóa thói quen?" })).toBeVisible();
+  await page.getByRole("button", { name: "Xóa", exact: true }).click();
+  await expect(page.locator(".habit-card")).toHaveCount(9);
+  await expect(page.getByText("Uống 2 lít nước", { exact: true })).toHaveCount(0);
+  await page.reload();
+  await page.locator("aside nav").getByRole("button", { name: "Thói quen", exact: true }).click();
+  await expect(page.locator(".habit-card")).toHaveCount(9);
+  await expect(page.getByText("Uống 2 lít nước", { exact: true })).toHaveCount(0);
+});
+
 test("giao diện di động điều hướng được và không tràn trang", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Mở menu" }).click();

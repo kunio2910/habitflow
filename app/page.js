@@ -165,8 +165,10 @@ function CategoryDonut() {
   return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
-function HabitsView({ habits, openAdd, query = "" }) {
+function HabitsView({ habits, openAdd, onDelete, query = "" }) {
   const [tab, setTab] = useState("Tất cả");
+  const [menuId,setMenuId]=useState(null);
+  const [pendingDelete,setPendingDelete]=useState(null);
   const labels = ["Tất cả", "Buổi sáng", "Buổi chiều", "Buổi tối"];
   const byTime = tab === "Tất cả" ? habits : habits.filter(h => h.period.toLowerCase().includes(tab.replace("Buổi ","").toLowerCase()));
   const filtered = byTime.filter(h => h.name.toLowerCase().includes(query.trim().toLowerCase()));
@@ -176,8 +178,11 @@ function HabitsView({ habits, openAdd, query = "" }) {
     <div className="habit-cards">{filtered.map(h=><div className="habit-card card" key={h.id}>
       <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
       <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
-      <button className="ghost-icon"><MoreVertical/></button>
+      <div className="habit-actions"><button aria-label={`Tùy chọn ${h.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===h.id?null:h.id)}><MoreVertical/></button>
+        {menuId===h.id&&<div className="action-popover"><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
+      </div>
     </div>)}{filtered.length===0&&<div className="empty-state card"><Search/><h3>Không tìm thấy thói quen</h3><p>Thử một từ khóa khác hoặc tạo thói quen mới.</p></div>}</div>
+    {pendingDelete&&<div className="modal-backdrop" onMouseDown={()=>setPendingDelete(null)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><Trash2/></span><h2>Xóa thói quen?</h2><p>“{pendingDelete.name}” sẽ bị xóa khỏi danh sách và dữ liệu trên trình duyệt.</p><div><button className="secondary" onClick={()=>setPendingDelete(null)}>Hủy</button><button className="delete-button" onClick={()=>{onDelete(pendingDelete.id);setPendingDelete(null)}}><Trash2/> Xóa</button></div></div></div>}
   </>;
 }
 
@@ -366,6 +371,10 @@ export default function Home() {
     notify("Đã thêm thói quen mới");
     setView("Thói quen");
   };
+  const deleteHabit=id=>{
+    setHabits(habits.filter(h=>h.id!==id));
+    notify("Đã xóa thói quen");
+  };
   const resetData=()=>{
     setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);
     localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
@@ -374,7 +383,7 @@ export default function Home() {
 
   let content;
   if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} toggle={toggle} openAdd={()=>setView("Thêm thói quen")} setView={setView}/>;
-  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>setView("Thêm thói quen")}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>setView("Thêm thói quen")} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>setView("Thói quen")} onSave={addHabit}/>;
   else if(view==="Lịch") content=<CalendarView habits={habits}/>;
   else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
