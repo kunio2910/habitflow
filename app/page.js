@@ -1,136 +1,333 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard, ListChecks, CalendarDays, BarChart3, Settings, Bell,
   Droplets, Dumbbell, BookOpen, Brain, Languages, NotebookPen, CandyOff,
   Moon, Flame, Clock3, TrendingUp, Plus, Check, ChevronLeft, ChevronRight,
-  Trophy, Target, X, Menu, Search, Sparkles, SlidersHorizontal
+  Trophy, Target, X, Menu, Search, Sparkles, SlidersHorizontal, Goal,
+  Medal, StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
+  UserRound, Grid2X2, CalendarCheck, Save, LockKeyhole, Award, Timer,
+  CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine
 } from "lucide-react";
 
 const seedHabits = [
-  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng" },
-  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Sáng" },
-  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối" },
-  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng" },
-  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều" },
-  { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối" },
-  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày" },
-  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối" }
+  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", streak: 7, rate: 90, category: "Sức khỏe" },
+  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", streak: 12, rate: 86, category: "Sức khỏe" },
+  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", streak: 15, rate: 93, category: "Học tập" },
+  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", streak: 5, rate: 71, category: "Phát triển bản thân" },
+  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", streak: 3, rate: 57, category: "Học tập" },
+  { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", streak: 0, rate: 0, category: "Phát triển bản thân" },
+  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", streak: 0, rate: 28, category: "Sức khỏe" },
+  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 7, rate: 43, category: "Sức khỏe" }
 ];
 
-const IconMap = { water: Droplets, sport: Dumbbell, book: BookOpen, brain: Brain, language: Languages, journal: NotebookPen, candy: CandyOff, moon: Moon };
+const goalsSeed = [
+  { id: 1, name: "Đọc 12 cuốn sách trong năm", icon: "book", color: "orange", progress: 50, value: "6 / 12 cuốn", due: "31/12/2026" },
+  { id: 2, name: "Tập thể dục 30 ngày liên tiếp", icon: "sport", color: "green", progress: 50, value: "15 / 30 ngày", due: "15/08/2026" },
+  { id: 3, name: "Uống đủ 2 lít nước mỗi ngày trong 90 ngày", icon: "water", color: "blue", progress: 50, value: "45 / 90 ngày", due: "22/09/2026" },
+  { id: 4, name: "Tiết kiệm 20 triệu đồng", icon: "language", color: "yellow", progress: 63, value: "12.500.000 / 20.000.000 đ", due: "31/12/2026" }
+];
+
+const IconMap = {
+  water: Droplets, sport: Dumbbell, book: BookOpen, brain: Brain,
+  language: Languages, journal: NotebookPen, candy: CandyOff, moon: Moon
+};
+
 const nav = [
   ["Tổng quan", LayoutDashboard], ["Thói quen", ListChecks], ["Hôm nay", Sparkles],
-  ["Lịch", CalendarDays], ["Báo cáo", BarChart3], ["Cài đặt", Settings]
+  ["Lịch", CalendarDays], ["Báo cáo", BarChart3], ["Thống kê", TrendingUp],
+  ["Mục tiêu", Goal], ["Thành tựu", Medal], ["Ghi chú", StickyNote], ["Cài đặt", Settings]
 ];
+
+const chartValues = [52, 69, 66, 83, 95, 76, 84];
+const week = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+function HabitIcon({ habit, icon, color }) {
+  const I = IconMap[habit?.icon || icon] || Target;
+  return <span className={`habit-icon ${habit?.color || color || "purple"}`}><I /></span>;
+}
 
 function Ring({ value, size = 54 }) {
   return <div className="ring" style={{ "--p": `${value * 3.6}deg`, width: size, height: size }}><span>{value}%</span></div>;
 }
 
-function StatCard({ label, value, sub, icon: Icon, tone, ring }) {
-  return <div className="stat card"><div><p>{label}</p><strong>{value}</strong><small>{sub}</small></div>{ring ? <Ring value={ring} /> : <div className={`stat-icon ${tone}`}><Icon /></div>}</div>;
+function StatCard({ label, value, sub, icon: Icon, tone, ring, delta }) {
+  return <div className="stat card"><div><p>{label}</p><strong>{value}</strong><small>{sub} {delta && <em>{delta}</em>}</small></div>{ring !== undefined ? <Ring value={ring} /> : <div className={`stat-icon ${tone}`}><Icon /></div>}</div>;
 }
 
-function MiniLine() {
+function PageTitle({ eyebrow, title, text, action }) {
+  return <div className="page-title">
+    <div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1>{text && <p>{text}</p>}</div>
+    {action}
+  </div>;
+}
+
+function SectionHead({ title, label, children }) {
+  return <div className="section-head"><div>{label && <span className="eyebrow">{label}</span>}<h2>{title}</h2></div>{children}</div>;
+}
+
+function MiniLine({ values = chartValues, color = "#6741f5" }) {
+  const points = values.map((v, i) => `${22 + i * 62},${144 - v * 1.18}`).join(" ");
+  const area = `22,144 ${points} 394,144`;
   return <svg className="line-chart" viewBox="0 0 420 155" preserveAspectRatio="none">
-    <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6d4aff" stopOpacity=".22"/><stop offset="1" stopColor="#6d4aff" stopOpacity="0"/></linearGradient></defs>
-    {[22,61,100,139].map(y => <line key={y} x1="35" x2="410" y1={y} y2={y} stroke="#eef0f7" />)}
-    <path d="M35 112 L95 79 L155 84 L215 51 L275 32 L335 20 L400 60 L400 140 L35 140Z" fill="url(#fade)"/>
-    <path d="M35 112 L95 79 L155 84 L215 51 L275 32 L335 20 L400 60" fill="none" stroke="#6541f5" strokeWidth="3"/>
-    {[["35","112"],["95","79"],["155","84"],["215","51"],["275","32"],["335","20"],["400","60"]].map(([x,y])=><circle key={x} cx={x} cy={y} r="4" fill="#6541f5"/>)}
+    <defs><linearGradient id={`fade-${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".2"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
+    {[25,63,101,139].map(y => <line key={y} x1="20" x2="404" y1={y} y2={y} stroke="#eef0f7" />)}
+    <polygon points={area} fill={`url(#fade-${color.replace("#","")})`} />
+    <polyline points={points} fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />
+    {values.map((v,i)=><circle key={i} cx={22+i*62} cy={144-v*1.18} r="4" fill={color}/>)}
   </svg>;
+}
+
+function Overview({ habits, toggle, openAdd, setView }) {
+  const done = habits.filter(h => h.done).length;
+  const percent = Math.round(done / habits.length * 100) || 0;
+  const [filter, setFilter] = useState("Tất cả");
+  const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
+  return <>
+    <PageTitle eyebrow="THỨ SÁU, 24 THÁNG 7" title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <section className="stats">
+      <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
+      <StatCard label="Chuỗi ngày hiện tại" value="7" sub="ngày liên tiếp" icon={Flame} tone="green"/>
+      <StatCard label="Tổng hoàn thành" value="48" sub="thói quen" icon={TrendingUp} tone="blue"/>
+      <StatCard label="Thời gian tập trung" value="12.5" sub="giờ" icon={Clock3} tone="orange"/>
+    </section>
+    <section className="dashboard-grid">
+      <div className="today card">
+        <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
+          <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
+        </SectionHead>
+        <div className="progress"><i style={{width:`${percent}%`}}/></div>
+        <div className="habit-list">{shown.map(h => <div className="habit" key={h.id}>
+          <HabitIcon habit={h}/><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
+          {h.progress > 0 && h.progress < 100 ? <Ring value={h.progress} size={44}/> : <button aria-label="Đánh dấu hoàn thành" className={h.done?"check done":"check"} onClick={()=>toggle(h.id)}>{h.done&&<Check/>}</button>}
+        </div>)}</div>
+        <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
+      </div>
+      <div className="right-col">
+        <CalendarMini setView={setView}/>
+        <AchievementsMini setView={setView}/>
+      </div>
+    </section>
+    <ReportSummary habits={habits}/>
+  </>;
+}
+
+function CalendarMini({ setView }) {
+  return <div className="calendar card">
+    <SectionHead title="Lịch"><button className="link" onClick={()=>setView("Lịch")}>Xem đầy đủ</button></SectionHead>
+    <div className="month"><ChevronLeft/><strong>Tháng 7, 2026</strong><ChevronRight/></div>
+    <div className="days">{week.map(d=><b key={d}>{d}</b>)}{[...Array(31)].map((_,i)=><span className={i+1===24?"current":""} key={i}>{i+1}</span>)}</div>
+  </div>;
+}
+
+function AchievementsMini({ setView }) {
+  const rows = [["7 ngày liên tiếp","Hoàn thành thói quen 7 ngày liên tiếp","green",Flame],["Buổi sáng năng lượng","Hoàn thành tất cả thói quen buổi sáng","orange",Sparkles],["Không bỏ cuộc","Không bỏ lỡ ngày nào trong tuần","blue",Trophy]];
+  return <div className="achievements card"><SectionHead title="Thành tích"><button className="link" onClick={()=>setView("Thành tựu")}>Xem tất cả</button></SectionHead>
+    {rows.map(([a,b,c,I])=><div className="achievement" key={a}><span className={c}><I/></span><div><strong>{a}</strong><p>{b}</p></div></div>)}
+  </div>;
+}
+
+function ReportSummary({ habits }) {
+  const [report, setReport] = useState("Tuần");
+  return <section className="reports card">
+    <SectionHead title="Báo cáo" label="PHÂN TÍCH TIẾN ĐỘ"><div className="tabs">{["Tuần","Tháng","Năm"].map(t=><button className={report===t?"selected":""} key={t} onClick={()=>setReport(t)}>{t}</button>)}</div></SectionHead>
+    <div className="report-grid">
+      <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">78% <span>↗ 12% so với {report.toLowerCase()} trước</span></div><MiniLine/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
+      <HabitBars habits={habits}/>
+      <StreakChart/>
+      <CategoryDonut/>
+    </div>
+  </section>;
+}
+
+function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
+  return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${Math.max(h.rate, 15)}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
+}
+
+function StreakChart() {
+  return <div className="report-card streak"><p>Chuỗi ngày dài nhất</p><div className="metric">15 ngày <span>+5 ngày so với kỷ lục trước</span></div><div className="columns">{[7,10,11,12,9,10,11,12,8,15,10,14].map((v,i)=><i key={i} style={{height:v*5}}><small>{v}</small></i>)}</div></div>;
+}
+
+function CategoryDonut() {
+  return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
+}
+
+function HabitsView({ habits, openAdd }) {
+  const [tab, setTab] = useState("Tất cả");
+  const labels = ["Tất cả", "Buổi sáng", "Buổi chiều", "Buổi tối"];
+  const filtered = tab === "Tất cả" ? habits : habits.filter(h => h.period.toLowerCase().includes(tab.replace("Buổi ","").toLowerCase()));
+  return <>
+    <PageTitle title="Thói quen của tôi" text="Quản lý và theo dõi tất cả thói quen của bạn." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <div className="page-tabs">{labels.map(x=><button className={tab===x?"active":""} key={x} onClick={()=>setTab(x)}>{x} <span>{x==="Tất cả"?`(${habits.length})`:""}</span></button>)}</div>
+    <div className="habit-cards">{filtered.map(h=><div className="habit-card card" key={h.id}>
+      <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
+      <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
+      <button className="ghost-icon"><MoreVertical/></button>
+    </div>)}</div>
+  </>;
+}
+
+function AddHabitView({ onBack, onSave }) {
+  const [form, setForm] = useState({ name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", time:"Buổi sáng", reminder:true, goal:"Số lượng", amount:"1" });
+  const set = (key, value) => setForm({...form,[key]:value});
+  const categories = [["Sức khỏe",HeartPulse],["Học tập",BookOpen],["Phát triển bản thân",UserRound],["Công việc",BriefcaseBusiness],["Khác",Grid2X2]];
+  return <div className="form-page">
+    <button className="back-btn" onClick={onBack}><ArrowLeft/> Thêm thói quen</button>
+    <div className="form-card card">
+      <h2>Thêm thói quen mới</h2>
+      <p className="form-intro">Thiết lập một thói quen phù hợp với nhịp sống của bạn.</p>
+      <label>Tên thói quen<input value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Ví dụ: Đọc sách 20 trang"/></label>
+      <label>Mô tả (tùy chọn)<input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ghi chú thêm về thói quen này..."/></label>
+      <fieldset><legend>Danh mục</legend><div className="category-picks">{categories.map(([name,I])=><button type="button" onClick={()=>set("category",name)} className={form.category===name?"selected":""} key={name}><I/><span>{name}</span></button>)}</div></fieldset>
+      <fieldset><legend>Tần suất</legend><div className="choice-row">{["Hàng ngày","Hàng tuần","Tùy chọn"].map(x=><button type="button" onClick={()=>set("frequency",x)} className={form.frequency===x?"selected":""} key={x}><CalendarCheck/>{x}</button>)}</div></fieldset>
+      <fieldset><legend>Thời gian</legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>set("time",a)} className={form.time===a?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small></button>)}</div></fieldset>
+      <div className="form-split"><label>Nhắc nhở<span className="switch-line"><input type="time" defaultValue="08:00"/><button type="button" className={form.reminder?"switch on":"switch"} onClick={()=>set("reminder",!form.reminder)}><i/></button></span></label><label>Ngày bắt đầu<input type="date" defaultValue="2026-07-24"/></label></div>
+      <fieldset><legend>Mục tiêu</legend><div className="goal-options">{["Không có mục tiêu","Số lượng","Thời gian"].map(x=><label key={x}><input type="radio" checked={form.goal===x} onChange={()=>set("goal",x)}/>{x}{x===form.goal&&x!=="Không có mục tiêu"&&<><input className="mini-input" value={form.amount} onChange={e=>set("amount",e.target.value)}/><span>{x==="Thời gian"?"phút":"lần"}</span></>}</label>)}</div></fieldset>
+      <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&onSave(form)}><Save/> Lưu thói quen</button></div>
+    </div>
+  </div>;
+}
+
+function CalendarView({ habits }) {
+  const completion = [
+    [1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,0,0,0,0,0],[0,0,0,0,0,0,0]
+  ];
+  return <>
+    <PageTitle title="Lịch thói quen" text="Theo dõi mức độ duy trì của bạn theo từng ngày." action={<div className="segmented"><button className="active">Tuần</button><button>Tháng</button><button>Hôm nay</button></div>}/>
+    <div className="calendar-range"><ChevronLeft/><strong>20 - 26 Tháng 7, 2026</strong><ChevronRight/></div>
+    <div className="habit-calendar card">
+      <div className="calendar-head"><span></span>{week.map((d,i)=><b className={i===4?"today-col":""} key={d}>{d}<small>{20+i}/5</small></b>)}</div>
+      {habits.map((h,r)=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{week.map((_,c)=><span className={c===4?"today-col":""} key={c}>{completion[r]?.[c]?<CircleCheckBig/>:<i/>}</span>)}</div>)}
+    </div>
+    <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành","85%","+15% so với tuần trước"],["Tổng hoàn thành","34 / 40",""],["Chuỗi ngày dài nhất","12 ngày","Tập thể dục 30 phút"],["Thời gian tập trung","14.5 giờ",""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
+  </>;
+}
+
+function ReportsView({ habits }) {
+  const [period,setPeriod]=useState("Tuần");
+  return <>
+    <PageTitle title="Báo cáo" text="Bức tranh tổng quan về hành trình xây dựng thói quen." action={<div className="tabs">{["Tuần","Tháng","Năm","Tùy chỉnh"].map(x=><button onClick={()=>setPeriod(x)} className={period===x?"selected":""} key={x}>{x}</button>)}</div>}/>
+    <section className="stats report-stats">
+      <StatCard label="Tỷ lệ hoàn thành trung bình" value="85%" sub="" delta="+12%"/>
+      <StatCard label="Tổng thói quen hoàn thành" value="156" sub="lần"/>
+      <StatCard label="Chuỗi ngày dài nhất" value="15 ngày" sub=""/>
+      <StatCard label="Tổng thời gian tập" value="48.5 giờ" sub=""/>
+    </section>
+    <div className="report-grid standalone">
+      <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={[48,65,62,80,91,72,79]}/><div className="chart-labels">{["18/5","19/5","20/5","21/5","22/5","23/5","24/5"].map(x=><span key={x}>{x}</span>)}</div></div>
+      <CategoryDonut/>
+      <div className="report-card card"><p>Thói quen hàng đầu</p><div className="ranking">{habits.slice(0,3).map((h,i)=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{12-i*2} ngày</strong></div>)}</div></div>
+      <div className="report-card card"><p>Thói quen cần cải thiện</p><div className="improve">{habits.slice(-3).map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></div>)}</div></div>
+    </div>
+  </>;
+}
+
+function StatisticsView() {
+  return <>
+    <PageTitle title="Thống kê" text="Phân tích chuyên sâu về nhịp độ và khung giờ hiệu quả." action={<div className="selects"><select defaultValue="all"><option value="all">Tất cả thói quen</option></select><select><option>30 ngày qua</option><option>7 ngày qua</option></select></div>}/>
+    <div className="stats-grid">
+      <StreakChart/>
+      <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{[84,76,81,79,82,91,96].map((v,i)=><div key={i}><i style={{height:`${v}%`}}/><span>{week[i]}</span></div>)}</div></div>
+      <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.2+(i%7)*.12}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
+      <div className="report-card card focus-chart"><p>Thời gian tập trung</p><MiniLine values={[30,38,52,44,63,54,72]} color="#456df5"/><strong>21.0 <small>giờ</small></strong><span>Tổng thời gian</span></div>
+    </div>
+  </>;
+}
+
+function GoalsView({ goals, openGoal }) {
+  const [tab,setTab]=useState("Đang thực hiện");
+  return <>
+    <PageTitle title="Mục tiêu của tôi" text="Biến những mong muốn lớn thành tiến bộ nhỏ mỗi ngày." action={<button className="primary" onClick={openGoal}><Plus/> Thêm mục tiêu</button>}/>
+    <div className="page-tabs"><button className={tab==="Đang thực hiện"?"active":""} onClick={()=>setTab("Đang thực hiện")}>Đang thực hiện ({goals.length})</button><button className={tab==="Đã hoàn thành"?"active":""} onClick={()=>setTab("Đã hoàn thành")}>Đã hoàn thành (3)</button></div>
+    {tab==="Đang thực hiện"?<div className="goal-list">{goals.map(g=><div className="goal-card card" key={g.id}><HabitIcon icon={g.icon} color={g.color}/><div><div className="goal-title"><strong>{g.name}</strong><button className="ghost-icon"><MoreVertical/></button></div><span>Tiến độ <b>{g.value}</b></span><div className="goal-progress"><i style={{width:`${g.progress}%`}}/></div><footer><span>Hạn: {g.due}</span><b>{g.progress}%</b></footer></div></div>)}</div>:<div className="empty-state card"><Trophy/><h3>3 mục tiêu đã hoàn thành</h3><p>Bạn đang làm rất tốt. Hãy tiếp tục chinh phục mục tiêu tiếp theo!</p></div>}
+    <div className="suggestions"><h3>Gợi ý mục tiêu cho bạn</h3>{["Thiền 30 ngày","Học 1000 từ vựng","Chạy 100km","Giảm 5kg","Ngủ trước 22:00 trong 30 ngày"].map(x=><button key={x}>{x}</button>)}</div>
+  </>;
+}
+
+const earned = [
+  ["Khởi đầu tốt","Hoàn thành thói quen đầu tiên","blue",Medal],
+  ["3 ngày liên tiếp","3 ngày liên tiếp","green",Award],
+  ["7 ngày liên tiếp","7 ngày liên tiếp","green",Award],
+  ["14 ngày liên tiếp","14 ngày liên tiếp","blue",Medal],
+  ["Không bỏ cuộc","Hoàn thành 7 tuần không bỏ ngày","yellow",Trophy],
+  ["Buổi sáng năng lượng","Hoàn thành tất cả buổi sáng","orange",Sun],
+  ["Đọc sách mỗi ngày","Đọc sách 7 ngày liên tiếp","purple",BookOpen],
+  ["Siêng năng","Hoàn thành 100 thói quen","slate",LockKeyhole]
+];
+
+function AchievementsView() {
+  const [tab,setTab]=useState("Tất cả");
+  return <>
+    <PageTitle title="Thành tựu của tôi" text="Mỗi huy hiệu là một dấu mốc đáng tự hào."/>
+    <div className="page-tabs">{["Tất cả","Đã đạt được","Chưa đạt được"].map(x=><button onClick={()=>setTab(x)} className={tab===x?"active":""} key={x}>{x}</button>)}</div>
+    <h3 className="subheading">Đã đạt được (12)</h3>
+    <div className="badge-grid">{earned.map(([a,b,c,I])=><div className="badge-card card" key={a}><div className={`badge ${c}`}><I/></div><strong>{a}</strong><p>{b}</p></div>)}</div>
+    <h3 className="subheading">Chưa đạt được (8)</h3>
+    <div className="badge-grid locked">{["30 ngày liên tiếp","Nắm kiếm trì","Bậc thầy kỷ luật","Huyền thoại"].map(x=><div className="badge-card card" key={x}><div className="badge slate"><LockKeyhole/></div><strong>{x}</strong><p>Hoàn thành thử thách để mở khóa</p></div>)}</div>
+  </>;
+}
+
+function SimpleView({ type }) {
+  const Icon = type==="Ghi chú"?PencilLine:Settings;
+  return <><PageTitle title={type} text={type==="Ghi chú"?"Ghi lại suy nghĩ và những điều bạn học được mỗi ngày.":"Tùy chỉnh trải nghiệm HabitFlow của bạn."}/><div className="simple-card card"><Icon/><h2>{type==="Ghi chú"?"Không gian ghi chú của bạn":"Cài đặt cá nhân"}</h2><p>{type==="Ghi chú"?"Tạo ghi chú đầu tiên để lưu lại hành trình xây dựng thói quen.":"Điều chỉnh thông báo, ngôn ngữ và giao diện theo sở thích."}</p><button className="primary"><Plus/>{type==="Ghi chú"?" Tạo ghi chú":" Thiết lập"}</button></div></>;
+}
+
+function GoalModal({ close, save }) {
+  const [name,setName]=useState("");
+  return <div className="modal-backdrop" onMouseDown={close}><form className="modal" onSubmit={e=>{e.preventDefault();name.trim()&&save(name)}} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={close}><X/></button><span className="modal-icon"><Flag/></span><h2>Thêm mục tiêu mới</h2><p>Đặt một cột mốc rõ ràng để duy trì động lực.</p><label>Tên mục tiêu<input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="Ví dụ: Chạy 100km trong tháng"/></label><label>Hạn hoàn thành<input type="date" defaultValue="2026-12-31"/></label><button className="primary wide" type="submit">Tạo mục tiêu</button></form></div>;
 }
 
 export default function Home() {
   const [habits, setHabits] = useState(seedHabits);
-  const [active, setActive] = useState("Tổng quan");
-  const [filter, setFilter] = useState("Tất cả");
-  const [report, setReport] = useState("Tuần");
-  const [modal, setModal] = useState(false);
+  const [goals, setGoals] = useState(goalsSeed);
+  const [view, setView] = useState("Tổng quan");
   const [mobile, setMobile] = useState(false);
-  const [name, setName] = useState("");
-  useEffect(() => { const saved = localStorage.getItem("habitflow-habits"); if (saved) setHabits(JSON.parse(saved)); }, []);
+  const [goalModal, setGoalModal] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("habitflow-habits");
+    if (saved) setHabits(JSON.parse(saved));
+  }, []);
   useEffect(() => { localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits]);
-  const done = habits.filter(h => h.done).length;
-  const percent = Math.round(done / habits.length * 100) || 0;
-  const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
+  useEffect(() => { window.scrollTo({top:0,behavior:"smooth"}); }, [view]);
+
   const toggle = id => setHabits(habits.map(h => h.id === id ? {...h, done: !h.done, progress: h.done ? 0 : 100, detail: h.done ? "Chưa thực hiện" : "Đã hoàn thành"} : h));
-  const addHabit = e => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setHabits([...habits, { id: Date.now(), name: name.trim(), detail: "Chưa thực hiện", icon: "water", color: "blue", progress: 0, done: false, period: "Cả ngày" }]);
-    setName(""); setModal(false);
-  };
-  const scrollTo = label => {
-    setActive(label); setMobile(false);
-    const target = label === "Báo cáo" ? "reports" : label === "Lịch" ? "calendar" : label === "Hôm nay" || label === "Thói quen" ? "today" : "top";
-    document.getElementById(target)?.scrollIntoView({ behavior: "smooth" });
+  const navigate = label => { setView(label==="Hôm nay"?"Tổng quan":label); setMobile(false); };
+  const addHabit = form => {
+    const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
+    const [icon,color] = categoryMap[form.category] || ["journal","slate"];
+    setHabits([...habits,{id:Date.now(),name:form.name,detail:"Chưa thực hiện",icon,color,progress:0,done:false,period:form.time.replace("Buổi ",""),streak:0,rate:0,category:form.category}]);
+    setView("Thói quen");
   };
 
-  return <div className="app" id="top">
+  let content;
+  if(view==="Tổng quan") content=<Overview habits={habits} toggle={toggle} openAdd={()=>setView("Thêm thói quen")} setView={setView}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} openAdd={()=>setView("Thêm thói quen")}/>;
+  else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>setView("Thói quen")} onSave={addHabit}/>;
+  else if(view==="Lịch") content=<CalendarView habits={habits}/>;
+  else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
+  else if(view==="Thống kê") content=<StatisticsView/>;
+  else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>setGoalModal(true)}/>;
+  else if(view==="Thành tựu") content=<AchievementsView/>;
+  else content=<SimpleView type={view}/>;
+
+  return <div className="app">
     <aside className={mobile ? "sidebar open" : "sidebar"}>
-      <div className="brand"><span><Check /></span>Habit<span>Flow</span></div>
-      <nav>{nav.map(([label, Icon]) => <button key={label} className={active === label ? "active" : ""} onClick={() => scrollTo(label)}><Icon />{label}</button>)}</nav>
+      <button className="brand" onClick={()=>navigate("Tổng quan")}><span><Check /></span>Habit<span>Flow</span></button>
+      <nav>{nav.map(([label, Icon]) => <button key={label} className={(view===label||(label==="Thói quen"&&view==="Thêm thói quen")) ? "active" : ""} onClick={() => navigate(label)}><Icon />{label}</button>)}</nav>
       <div className="encourage"><Trophy/><strong>Bạn đang làm rất tốt!</strong><p>Hãy duy trì để đạt mục tiêu của mình nhé.</p><a>7 ngày liên tiếp</a><div><i/></div></div>
     </aside>
     {mobile && <div className="scrim" onClick={()=>setMobile(false)}/>}
-
     <main>
       <header>
         <button className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
         <div className="search"><Search/><input placeholder="Tìm thói quen..."/></div>
         <button className="icon-btn"><Bell/></button>
       </header>
-
-      <section className="hero">
-        <div><span className="eyebrow">THỨ SÁU, 24 THÁNG 7</span><h1>Chào buổi sáng! <span>👋</span></h1><p>Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất.</p></div>
-        <button className="primary" onClick={()=>setModal(true)}><Plus/> Thêm thói quen</button>
-      </section>
-
-      <section className="stats">
-        <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
-        <StatCard label="Chuỗi ngày hiện tại" value="7" sub="ngày liên tiếp" icon={Flame} tone="green"/>
-        <StatCard label="Tổng hoàn thành" value="48" sub="thói quen" icon={TrendingUp} tone="blue"/>
-        <StatCard label="Thời gian tập trung" value="12.5" sub="giờ" icon={Clock3} tone="orange"/>
-      </section>
-
-      <section className="dashboard-grid">
-        <div className="today card" id="today">
-          <div className="section-head"><div><span className="eyebrow">TIẾN ĐỘ HÔM NAY</span><h2>{percent}% hoàn thành</h2></div><div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>
-          <div className="progress"><i style={{width:`${percent}%`}}/></div>
-          <div className="habit-list">{shown.map(h => {const I=IconMap[h.icon] || Target; return <div className="habit" key={h.id}>
-            <div className={`habit-icon ${h.color}`}><I/></div><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
-            {h.progress > 0 && h.progress < 100 ? <Ring value={h.progress} size={44}/> : <button aria-label="Đánh dấu hoàn thành" className={h.done?"check done":"check"} onClick={()=>toggle(h.id)}>{h.done&&<Check/>}</button>}
-          </div>})}</div>
-          <button className="add-row" onClick={()=>setModal(true)}><Plus/> Thêm thói quen mới</button>
-        </div>
-
-        <div className="right-col">
-          <div className="calendar card" id="calendar">
-            <div className="section-head"><h2>Lịch</h2><button className="link">Xem đầy đủ</button></div>
-            <div className="month"><ChevronLeft/><strong>Tháng 7, 2026</strong><ChevronRight/></div>
-            <div className="days">{["T2","T3","T4","T5","T6","T7","CN"].map(d=><b key={d}>{d}</b>)}{[...Array(31)].map((_,i)=><span className={i+1===24?"current":""} key={i}>{i+1}</span>)}</div>
-          </div>
-          <div className="achievements card">
-            <div className="section-head"><h2>Thành tích</h2><button className="link">Xem tất cả</button></div>
-            {[["7 ngày liên tiếp","Hoàn thành thói quen 7 ngày liên tiếp","green",Flame],["Buổi sáng năng lượng","Hoàn thành tất cả thói quen buổi sáng","orange",Sparkles],["Không bỏ cuộc","Không bỏ lỡ ngày nào trong tuần","blue",Trophy]].map(([a,b,c,I])=><div className="achievement" key={a}><span className={c}><I/></span><div><strong>{a}</strong><p>{b}</p></div></div>)}
-          </div>
-        </div>
-      </section>
-
-      <section className="reports card" id="reports">
-        <div className="section-head"><div><span className="eyebrow">PHÂN TÍCH TIẾN ĐỘ</span><h2>Báo cáo</h2></div><div className="tabs">{["Tuần","Tháng","Năm"].map(t=><button className={report===t?"selected":""} key={t} onClick={()=>setReport(t)}>{t}</button>)}</div></div>
-        <div className="report-grid">
-          <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">78% <span>↗ 12% so với {report.toLowerCase()} trước</span></div><MiniLine/><div className="chart-labels"><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span></div></div>
-          <div className="report-card"><p>Hoàn thành theo thói quen</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${Math.max(h.progress, 28)}%`}}/></i><b>{Math.max(h.progress,28)}%</b></div>)}</div></div>
-          <div className="report-card streak"><p>Chuỗi ngày dài nhất</p><div className="metric">15 ngày <span>+5 ngày so với kỷ lục trước</span></div><div className="columns">{[7,10,11,12,9,10,11,12,8,15,10,14].map((v,i)=><i key={i} style={{height:v*5}}/>)}</div></div>
-          <div className="report-card"><p>Phân bố theo thời gian trong ngày</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sáng","35%","blue"],["Chiều","25%","green"],["Tối","30%","orange"],["Đêm","10%","purple"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>
-        </div>
-      </section>
+      <div className="view-shell">{content}</div>
     </main>
-
-    {modal && <div className="modal-backdrop" onMouseDown={()=>setModal(false)}><form className="modal" onSubmit={addHabit} onMouseDown={e=>e.stopPropagation()}><button type="button" className="close" onClick={()=>setModal(false)}><X/></button><span className="modal-icon"><Target/></span><h2>Tạo thói quen mới</h2><p>Bắt đầu nhỏ, duy trì đều và tạo nên thay đổi lớn.</p><label>Tên thói quen<input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="Ví dụ: Đi bộ 20 phút"/></label><label>Thời điểm<select><option>Cả ngày</option><option>Buổi sáng</option><option>Buổi chiều</option><option>Buổi tối</option></select></label><button className="primary wide" type="submit">Tạo thói quen</button></form></div>}
+    {goalModal&&<GoalModal close={()=>setGoalModal(false)} save={name=>{setGoals([...goals,{id:Date.now(),name,icon:"book",color:"purple",progress:0,value:"0 / 100",due:"31/12/2026"}]);setGoalModal(false)}}/>}
   </div>;
 }
