@@ -79,6 +79,31 @@ test("xóa thói quen và giữ trạng thái sau khi tải lại", async ({ pag
   await expect(page.getByText("Uống 2 lít nước", { exact: true })).toHaveCount(0);
 });
 
+test("giao diện tối và trạng thái thành tựu được ghi nhớ", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Cài đặt", exact: true }).click();
+  await page.getByRole("button", { name: "Chuyển tối" }).click();
+  await expect(page.locator("body")).toHaveClass(/dark-mode/);
+  await page.reload();
+  await expect(page.locator("body")).toHaveClass(/dark-mode/);
+
+  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
+  await page.getByRole("button", { name: /Đặt lại thành tựu/ }).click();
+  await expect(page.getByRole("heading", { name: "Đặt lại thành tựu?" })).toBeVisible();
+  await page.getByRole("button", { name: "Đặt lại", exact: true }).click();
+  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
+  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
+});
+
+test("chọn ngày ở lịch tổng quan mở danh sách hoàn thành", async ({ page }) => {
+  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 24 tháng 7" }).click();
+  await expect(page.getByRole("heading", { name: "Ngày 24 tháng 7, 2026" })).toBeVisible();
+  await expect(page.locator(".completed-list > div")).not.toHaveCount(0);
+  await page.getByRole("button", { name: /Quay lại Tổng quan/ }).click();
+  await expect(page.getByRole("heading", { name: /Chào buổi sáng/ })).toBeVisible();
+});
+
 test("giao diện di động điều hướng được và không tràn trang", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Mở menu" }).click();
