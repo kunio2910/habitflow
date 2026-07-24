@@ -140,12 +140,40 @@ test("giao diện tối và trạng thái thành tựu được ghi nhớ", asyn
   await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
 });
 
-test("chọn ngày ở lịch tổng quan mở danh sách hoàn thành", async ({ page }) => {
+test("chuỗi ngày và thành tích mặc định đã được đặt lại", async ({ page }) => {
+  const streakCard=page.locator(".stat").filter({ hasText: "Chuỗi ngày hiện tại" });
+  await expect(streakCard.locator("strong")).toHaveText("0");
+  await expect(page.getByText("Chưa có thành tích", { exact: true })).toBeVisible();
+  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
+  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
+});
+
+test("ngày chưa có dữ liệu không tự động hiển thị hoàn thành", async ({ page }) => {
+  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 23 tháng 7" }).click();
+  await expect(page.getByRole("heading", { name: "Ngày 23 tháng 7, 2026" })).toBeVisible();
+  await expect(page.locator(".completed-list")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Chưa có thói quen hoàn thành" })).toBeVisible();
+});
+
+test("lịch ngày phản ánh đúng thao tác hoàn thành và bỏ hoàn thành", async ({ page }) => {
+  await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
   await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 24 tháng 7" }).click();
   await expect(page.getByRole("heading", { name: "Ngày 24 tháng 7, 2026" })).toBeVisible();
-  await expect(page.locator(".completed-list > div")).not.toHaveCount(0);
+  await expect(page.getByText("Viết nhật ký", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Quay lại Tổng quan/ }).click();
-  await expect(page.getByRole("heading", { name: /Chào buổi sáng/ })).toBeVisible();
+  await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
+  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 24 tháng 7" }).click();
+  await expect(page.getByText("Viết nhật ký", { exact: true })).toHaveCount(0);
+});
+
+test("có thể tùy chỉnh phần trăm tiến độ thói quen và lưu qua reload", async ({ page }) => {
+  await page.getByRole("button", { name: "Cập nhật tiến độ Học ngoại ngữ 30 phút" }).click();
+  await expect(page.getByRole("heading", { name: "Cập nhật tiến độ" })).toBeVisible();
+  await page.getByLabel("Phần trăm tiến độ").fill("65");
+  await page.getByRole("button", { name: "Lưu tiến độ" }).click();
+  await expect(page.getByRole("button", { name: "Cập nhật tiến độ Học ngoại ngữ 30 phút" }).getByText("65%")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Cập nhật tiến độ Học ngoại ngữ 30 phút" }).getByText("65%")).toBeVisible();
 });
 
 test("giao diện di động điều hướng được và không tràn trang", async ({ page }) => {

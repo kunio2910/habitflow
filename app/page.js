@@ -13,16 +13,16 @@ import {
 } from "lucide-react";
 
 const seedHabits = [
-  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", streak: 7, rate: 90, category: "Sức khỏe" },
-  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", streak: 12, rate: 86, category: "Sức khỏe" },
-  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", streak: 15, rate: 93, category: "Học tập" },
-  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", streak: 5, rate: 71, category: "Phát triển bản thân" },
-  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", streak: 3, rate: 57, category: "Học tập" },
+  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", streak: 0, rate: 90, category: "Sức khỏe" },
+  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", streak: 0, rate: 86, category: "Sức khỏe" },
+  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", streak: 0, rate: 93, category: "Học tập" },
+  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", streak: 0, rate: 71, category: "Phát triển bản thân" },
+  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", streak: 0, rate: 57, category: "Học tập" },
   { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", streak: 0, rate: 0, category: "Phát triển bản thân" },
   { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", streak: 0, rate: 28, category: "Sức khỏe" },
-  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 7, rate: 43, category: "Sức khỏe" },
-  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", streak: 9, rate: 82, category: "Sức khỏe" },
-  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", streak: 6, rate: 74, category: "Học tập" }
+  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 0, rate: 43, category: "Sức khỏe" },
+  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", streak: 0, rate: 82, category: "Sức khỏe" },
+  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", streak: 0, rate: 74, category: "Học tập" }
 ];
 
 const goalsSeed = [
@@ -40,10 +40,25 @@ const notesSeed = [
 ];
 
 const SAMPLE_VERSION = "habitflow-sample-v2";
-const DEFAULT_ACHIEVEMENTS = [1,2,3,4,5,6,7,8];
+const RESET_VERSION = "habitflow-reset-progress-v1";
+const DEFAULT_ACHIEVEMENTS = [];
+const CURRENT_DATE_KEY = "2026-07-24";
 
-function completedHabitsForDay(habits, day) {
-  return habits.filter(h => ((h.id * day) % 5) < 3);
+function dateKey(day) {
+  return `2026-07-${String(day).padStart(2,"0")}`;
+}
+
+function completedHabitsForDay(habits, completionHistory, day) {
+  const ids = new Set(completionHistory[dateKey(day)] || []);
+  return habits.filter(h => ids.has(h.id));
+}
+
+function longestStreak(habits) {
+  return Math.max(0,...habits.map(h=>Number(h.streak)||0));
+}
+
+function totalCompletions(completionHistory) {
+  return Object.values(completionHistory).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0);
 }
 
 const IconMap = {
@@ -96,17 +111,18 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, toggle, openAdd, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, unlockedAchievements, toggle, openProgress, openAdd, setView, onSelectDate }) {
   const done = habits.filter(h => h.done).length;
   const percent = Math.round(done / habits.length * 100) || 0;
+  const currentStreak = longestStreak(habits);
   const [filter, setFilter] = useState("Tất cả");
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
     <PageTitle eyebrow="THỨ SÁU, 24 THÁNG 7" title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="stats">
       <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
-      <StatCard label="Chuỗi ngày hiện tại" value="7" sub="ngày liên tiếp" icon={Flame} tone="green"/>
-      <StatCard label="Tổng hoàn thành" value="48" sub="thói quen" icon={TrendingUp} tone="blue"/>
+      <StatCard label="Chuỗi ngày hiện tại" value={currentStreak} sub="ngày liên tiếp" icon={Flame} tone="green"/>
+      <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
       <StatCard label="Thời gian tập trung" value="12.5" sub="giờ" icon={Clock3} tone="orange"/>
     </section>
     <section className="dashboard-grid">
@@ -117,13 +133,13 @@ function Overview({ habits, toggle, openAdd, setView, onSelectDate }) {
         <div className="progress"><i style={{width:`${percent}%`}}/></div>
         <div className="habit-list">{shown.map(h => <div className="habit" key={h.id}>
           <HabitIcon habit={h}/><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
-          {h.progress > 0 && h.progress < 100 ? <Ring value={h.progress} size={44}/> : <button aria-label="Đánh dấu hoàn thành" className={h.done?"check done":"check"} onClick={()=>toggle(h.id)}>{h.done&&<Check/>}</button>}
+          {h.progress > 0 && h.progress < 100 ? <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={()=>openProgress(h)}><Ring value={h.progress} size={44}/></button> : <button aria-label={`Đánh dấu hoàn thành ${h.name}`} className={h.done?"check done":"check"} onClick={()=>toggle(h.id)}>{h.done&&<Check/>}</button>}
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
       <div className="right-col">
         <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
-        <AchievementsMini setView={setView}/>
+        <AchievementsMini setView={setView} unlockedIds={unlockedAchievements}/>
       </div>
     </section>
     <ReportSummary habits={habits}/>
@@ -138,8 +154,8 @@ function CalendarMini({ setView, onSelectDate }) {
   </div>;
 }
 
-function DayDetailView({ habits, day, onBack }) {
-  const completed=completedHabitsForDay(habits,day);
+function DayDetailView({ habits, completionHistory, day, onBack }) {
+  const completed=completedHabitsForDay(habits,completionHistory,day);
   const rate=Math.round((completed.length/Math.max(habits.length,1))*100);
   return <>
     <button className="back-btn" onClick={onBack}><ArrowLeft/> Quay lại Tổng quan</button>
@@ -147,7 +163,7 @@ function DayDetailView({ habits, day, onBack }) {
     <section className="day-summary">
       <StatCard label="Đã hoàn thành" value={`${completed.length} / ${habits.length}`} sub="thói quen" ring={rate}/>
       <StatCard label="Tỷ lệ hoàn thành" value={`${rate}%`} sub="trong ngày" icon={TrendingUp} tone="blue"/>
-      <StatCard label="Chuỗi duy trì" value={`${Math.max(1,day%9)} ngày`} sub="liên tiếp" icon={Flame} tone="green"/>
+      <StatCard label="Chuỗi duy trì" value={`${completed.length?longestStreak(completed):0} ngày`} sub="liên tiếp" icon={Flame} tone="green"/>
     </section>
     <div className="day-detail card">
       <SectionHead title="Thói quen đã hoàn thành" label="NHẬT KÝ TRONG NGÀY"><span className="complete-count"><Check/> {completed.length} mục</span></SectionHead>
@@ -156,10 +172,14 @@ function DayDetailView({ habits, day, onBack }) {
   </>;
 }
 
-function AchievementsMini({ setView }) {
-  const rows = [["7 ngày liên tiếp","Hoàn thành thói quen 7 ngày liên tiếp","green",Flame],["Buổi sáng năng lượng","Hoàn thành tất cả thói quen buổi sáng","orange",Sparkles],["Không bỏ cuộc","Không bỏ lỡ ngày nào trong tuần","blue",Trophy]];
+function AchievementsMini({ setView, unlockedIds }) {
+  const rows = [
+    [3,"7 ngày liên tiếp","Hoàn thành thói quen 7 ngày liên tiếp","green",Flame],
+    [6,"Buổi sáng năng lượng","Hoàn thành tất cả thói quen buổi sáng","orange",Sparkles],
+    [5,"Không bỏ cuộc","Không bỏ lỡ ngày nào trong tuần","blue",Trophy]
+  ].filter(([id])=>unlockedIds.includes(id));
   return <div className="achievements card"><SectionHead title="Thành tích"><button className="link" onClick={()=>setView("Thành tựu")}>Xem tất cả</button></SectionHead>
-    {rows.map(([a,b,c,I])=><div className="achievement" key={a}><span className={c}><I/></span><div><strong>{a}</strong><p>{b}</p></div></div>)}
+    {rows.length?rows.map(([,a,b,c,I])=><div className="achievement" key={a}><span className={c}><I/></span><div><strong>{a}</strong><p>{b}</p></div></div>):<div className="mini-empty"><Medal/><strong>Chưa có thành tích</strong><p>Hoàn thành thói quen để mở khóa huy hiệu đầu tiên.</p></div>}
   </div>;
 }
 
@@ -170,7 +190,7 @@ function ReportSummary({ habits }) {
     <div className="report-grid">
       <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">78% <span>↗ 12% so với {report.toLowerCase()} trước</span></div><MiniLine/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
       <HabitBars habits={habits}/>
-      <StreakChart/>
+      <StreakChart habits={habits}/>
       <CategoryDonut/>
     </div>
   </section>;
@@ -180,15 +200,17 @@ function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
   return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${Math.max(h.rate, 15)}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
 }
 
-function StreakChart() {
-  return <div className="report-card streak"><p>Chuỗi ngày dài nhất</p><div className="metric">15 ngày <span>+5 ngày so với kỷ lục trước</span></div><div className="columns">{[7,10,11,12,9,10,11,12,8,15,10,14].map((v,i)=><i key={i} style={{height:v*5}}><small>{v}</small></i>)}</div></div>;
+function StreakChart({ habits = [] }) {
+  const streak=longestStreak(habits);
+  const values=habits.length?habits.slice(0,12).map(h=>Number(h.streak)||0):[0];
+  return <div className="report-card streak"><p>Chuỗi ngày dài nhất</p><div className="metric">{streak} ngày <span>{streak?`${streak} ngày đang duy trì`:"Chưa có chuỗi ngày"}</span></div><div className="columns">{values.map((v,i)=><i key={i} style={{height:Math.max(2,v*5)}}><small>{v}</small></i>)}</div></div>;
 }
 
 function CategoryDonut() {
   return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
-function HabitsView({ habits, openAdd, onEdit, onDelete, query = "" }) {
+function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" }) {
   const [tab, setTab] = useState("Tất cả");
   const [menuId,setMenuId]=useState(null);
   const [pendingDelete,setPendingDelete]=useState(null);
@@ -202,7 +224,7 @@ function HabitsView({ habits, openAdd, onEdit, onDelete, query = "" }) {
       <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
       <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
       <div className="habit-actions"><button aria-label={`Tùy chọn ${h.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===h.id?null:h.id)}><MoreVertical/></button>
-        {menuId===h.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onEdit(h);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
+        {menuId===h.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onProgress(h);setMenuId(null)}}><TrendingUp/> Cập nhật tiến độ</button><button className="edit-action" onClick={()=>{onEdit(h);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
       </div>
     </div>)}{filtered.length===0&&<div className="empty-state card"><Search/><h3>Không tìm thấy thói quen</h3><p>Thử một từ khóa khác hoặc tạo thói quen mới.</p></div>}</div>
     {pendingDelete&&<div className="modal-backdrop" onMouseDown={()=>setPendingDelete(null)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><Trash2/></span><h2>Xóa thói quen?</h2><p>“{pendingDelete.name}” sẽ bị xóa khỏi danh sách và dữ liệu trên trình duyệt.</p><div><button className="secondary" onClick={()=>setPendingDelete(null)}>Hủy</button><button className="delete-button" onClick={()=>{onDelete(pendingDelete.id);setPendingDelete(null)}}><Trash2/> Xóa</button></div></div></div>}
@@ -239,30 +261,30 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
   </div>;
 }
 
-function CalendarView({ habits }) {
-  const completion = [
-    [1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,0,0,0,0,0],[0,0,0,0,0,0,0]
-  ];
+function CalendarView({ habits, completionHistory }) {
+  const dates=[20,21,22,23,24,25,26];
+  const completedCount=dates.reduce((total,day)=>total+(completionHistory[dateKey(day)]?.length||0),0);
+  const completionRate=Math.round(completedCount/Math.max(habits.length*dates.length,1)*100);
   return <>
     <PageTitle title="Lịch thói quen" text="Theo dõi mức độ duy trì của bạn theo từng ngày." action={<div className="segmented"><button className="active">Tuần</button><button>Tháng</button><button>Hôm nay</button></div>}/>
     <div className="calendar-range"><ChevronLeft/><strong>20 - 26 Tháng 7, 2026</strong><ChevronRight/></div>
     <div className="habit-calendar card">
-      <div className="calendar-head"><span></span>{week.map((d,i)=><b className={i===4?"today-col":""} key={d}>{d}<small>{20+i}/5</small></b>)}</div>
-      {habits.map((h,r)=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{week.map((_,c)=><span className={c===4?"today-col":""} key={c}>{completion[r]?.[c]?<CircleCheckBig/>:<i/>}</span>)}</div>)}
+      <div className="calendar-head"><span></span>{week.map((d,i)=><b className={i===4?"today-col":""} key={d}>{d}<small>{dates[i]}/7</small></b>)}</div>
+      {habits.map(h=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{dates.map((day,c)=><span className={c===4?"today-col":""} key={day}>{completionHistory[dateKey(day)]?.includes(h.id)?<CircleCheckBig/>:<i/>}</span>)}</div>)}
     </div>
-    <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành","85%","+15% so với tuần trước"],["Tổng hoàn thành","34 / 40",""],["Chuỗi ngày dài nhất","12 ngày","Tập thể dục 30 phút"],["Thời gian tập trung","14.5 giờ",""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
+    <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành",`${completionRate}%`,"Dữ liệu thực tế"],["Tổng hoàn thành",`${completedCount} / ${habits.length*dates.length}`,""],["Chuỗi ngày dài nhất",`${longestStreak(habits)} ngày`,""],["Thời gian tập trung","0 giờ",""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
   </>;
 }
 
 function ReportsView({ habits }) {
   const [period,setPeriod]=useState("Tuần");
+  const streak=longestStreak(habits);
   return <>
     <PageTitle title="Báo cáo" text="Bức tranh tổng quan về hành trình xây dựng thói quen." action={<div className="tabs">{["Tuần","Tháng","Năm","Tùy chỉnh"].map(x=><button onClick={()=>setPeriod(x)} className={period===x?"selected":""} key={x}>{x}</button>)}</div>}/>
     <section className="stats report-stats">
       <StatCard label="Tỷ lệ hoàn thành trung bình" value="85%" sub="" delta="+12%"/>
       <StatCard label="Tổng thói quen hoàn thành" value="156" sub="lần"/>
-      <StatCard label="Chuỗi ngày dài nhất" value="15 ngày" sub=""/>
+      <StatCard label="Chuỗi ngày dài nhất" value={`${streak} ngày`} sub=""/>
       <StatCard label="Tổng thời gian tập" value="48.5 giờ" sub=""/>
     </section>
     <div className="report-grid standalone">
@@ -274,11 +296,11 @@ function ReportsView({ habits }) {
   </>;
 }
 
-function StatisticsView() {
+function StatisticsView({ habits }) {
   return <>
     <PageTitle title="Thống kê" text="Phân tích chuyên sâu về nhịp độ và khung giờ hiệu quả." action={<div className="selects"><select defaultValue="all"><option value="all">Tất cả thói quen</option></select><select><option>30 ngày qua</option><option>7 ngày qua</option></select></div>}/>
     <div className="stats-grid">
-      <StreakChart/>
+      <StreakChart habits={habits}/>
       <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{[84,76,81,79,82,91,96].map((v,i)=><div key={i}><i style={{height:`${v}%`}}/><span>{week[i]}</span></div>)}</div></div>
       <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.2+(i%7)*.12}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
       <div className="report-card card focus-chart"><p>Thời gian tập trung</p><MiniLine values={[30,38,52,44,63,54,72]} color="#456df5"/><strong>21.0 <small>giờ</small></strong><span>Tổng thời gian</span></div>
@@ -371,6 +393,24 @@ function SettingsView({ resetData, notify, theme, toggleTheme }) {
   </>;
 }
 
+function ProgressModal({ habit, close, save }) {
+  const [progress,setProgress]=useState(Number(habit.progress)||0);
+  const setSafeProgress=value=>setProgress(Math.min(100,Math.max(0,Number(value)||0)));
+  return <div className="modal-backdrop" onMouseDown={close}><form className="modal progress-modal" onSubmit={e=>{e.preventDefault();save(progress)}} onMouseDown={e=>e.stopPropagation()}>
+    <button type="button" className="close" onClick={close}><X/></button>
+    <span className="modal-icon"><TrendingUp/></span>
+    <h2>Cập nhật tiến độ</h2>
+    <p>Điều chỉnh mức độ hoàn thành hôm nay của “{habit.name}”. Mốc 100% sẽ được ghi nhận là hoàn thành.</p>
+    <div className="progress-editor">
+      <Ring value={progress} size={76}/>
+      <label>Phần trăm hoàn thành<div className="progress-number"><input aria-label="Phần trăm tiến độ" type="number" min="0" max="100" value={progress} onChange={e=>setSafeProgress(e.target.value)}/><span>%</span></div></label>
+    </div>
+    <input aria-label="Thanh tiến độ" className="progress-range" type="range" min="0" max="100" step="1" value={progress} onChange={e=>setSafeProgress(e.target.value)}/>
+    <div className="milestones">{[0,25,50,75,100].map(value=><button type="button" className={progress===value?"selected":""} onClick={()=>setProgress(value)} key={value}>{value}%</button>)}</div>
+    <button className="primary wide" type="submit"><Save/> Lưu tiến độ</button>
+  </form></div>;
+}
+
 function GoalModal({ close, save, goal }) {
   const [name,setName]=useState(goal?.name||"");
   const [value,setValue]=useState(goal?.value||"0 / 100");
@@ -387,6 +427,7 @@ function GoalModal({ close, save, goal }) {
 
 export default function Home() {
   const [habits, setHabits] = useState(seedHabits);
+  const [completionHistory,setCompletionHistory]=useState({});
   const [goals, setGoals] = useState(goalsSeed);
   const [notes, setNotes] = useState(notesSeed);
   const [unlockedAchievements,setUnlockedAchievements]=useState(DEFAULT_ACHIEVEMENTS);
@@ -394,6 +435,7 @@ export default function Home() {
   const [selectedDay,setSelectedDay]=useState(24);
   const [view, setView] = useState("Tổng quan");
   const [editingHabit,setEditingHabit]=useState(null);
+  const [progressHabit,setProgressHabit]=useState(null);
   const [mobile, setMobile] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
   const [editingGoal,setEditingGoal]=useState(null);
@@ -408,19 +450,31 @@ export default function Home() {
         return Array.isArray(value)?value:fallback;
       } catch { return fallback; }
     };
+    const readObject=(key,fallback)=>{
+      try {
+        const value=JSON.parse(localStorage.getItem(key));
+        return value&&typeof value==="object"&&!Array.isArray(value)?value:fallback;
+      } catch { return fallback; }
+    };
     const existingHabits=read("habitflow-habits",seedHabits);
+    const needsReset=localStorage.getItem("habitflow-reset-version")!==RESET_VERSION;
+    const normalizedHabits=needsReset?existingHabits.map(h=>({...h,streak:0})):existingHabits;
     if(localStorage.getItem("habitflow-sample-version")!==SAMPLE_VERSION){
-      const ids=new Set(existingHabits.map(h=>h.id));
-      setHabits([...existingHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
+      const ids=new Set(normalizedHabits.map(h=>h.id));
+      setHabits([...normalizedHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
       localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
-    } else setHabits(existingHabits);
+    } else setHabits(normalizedHabits);
+    const storedHistory=readObject("habitflow-completion-history",null);
+    setCompletionHistory(storedHistory||{[CURRENT_DATE_KEY]:normalizedHabits.filter(h=>h.done).map(h=>h.id)});
     setGoals(read("habitflow-goals",goalsSeed));
     setNotes(read("habitflow-notes",notesSeed));
-    setUnlockedAchievements(read("habitflow-achievements",DEFAULT_ACHIEVEMENTS));
+    setUnlockedAchievements(needsReset?[]:read("habitflow-achievements",DEFAULT_ACHIEVEMENTS));
+    if(needsReset)localStorage.setItem("habitflow-reset-version",RESET_VERSION);
     setTheme(localStorage.getItem("habitflow-theme")==="dark"?"dark":"light");
     setHydrated(true);
   }, []);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits,hydrated]);
+  useEffect(() => { if(hydrated)localStorage.setItem("habitflow-completion-history", JSON.stringify(completionHistory)); }, [completionHistory,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-goals", JSON.stringify(goals)); }, [goals,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-notes", JSON.stringify(notes)); }, [notes,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-achievements", JSON.stringify(unlockedAchievements)); }, [unlockedAchievements,hydrated]);
@@ -436,7 +490,29 @@ export default function Home() {
   },[toast]);
 
   const notify=message=>setToast(message);
-  const toggle = id => {setHabits(habits.map(h => h.id === id ? {...h, done: !h.done, progress: h.done ? 0 : 100, detail: h.done ? "Chưa thực hiện" : "Đã hoàn thành"} : h));notify("Đã cập nhật tiến độ")};
+  const recordCompletion=(id,done)=>{
+    setCompletionHistory(history=>{
+      const ids=new Set(history[CURRENT_DATE_KEY]||[]);
+      if(done)ids.add(id);else ids.delete(id);
+      return {...history,[CURRENT_DATE_KEY]:[...ids]};
+    });
+  };
+  const toggle = id => {
+    const habit=habits.find(h=>h.id===id);
+    if(!habit)return;
+    const done=!habit.done;
+    setHabits(habits.map(h => h.id === id ? {...h,done,progress:done?100:0,detail:done?"Đã hoàn thành":"Chưa thực hiện"} : h));
+    recordCompletion(id,done);
+    notify("Đã cập nhật tiến độ");
+  };
+  const updateHabitProgress=(id,value)=>{
+    const progress=Math.min(100,Math.max(0,Number(value)||0));
+    const done=progress===100;
+    setHabits(habits.map(h=>h.id===id?{...h,progress,done,detail:done?"Đã hoàn thành":progress?`${progress}% mục tiêu`:"Chưa thực hiện"}:h));
+    recordCompletion(id,done);
+    setProgressHabit(null);
+    notify(`Đã cập nhật tiến độ thành ${progress}%`);
+  };
   const navigate = label => { setView(label); setMobile(false); };
   const saveHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
@@ -455,11 +531,14 @@ export default function Home() {
   };
   const deleteHabit=id=>{
     setHabits(habits.filter(h=>h.id!==id));
+    setCompletionHistory(history=>Object.fromEntries(Object.entries(history).map(([key,ids])=>[key,ids.filter(item=>item!==id)])));
     notify("Đã xóa thói quen");
   };
   const resetData=()=>{
     setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);setUnlockedAchievements(DEFAULT_ACHIEVEMENTS);
+    setCompletionHistory({[CURRENT_DATE_KEY]:seedHabits.filter(h=>h.done).map(h=>h.id)});
     localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
+    localStorage.setItem("habitflow-reset-version",RESET_VERSION);
     notify("Đã khôi phục dữ liệu mẫu");
   };
   const resetAchievements=()=>{setUnlockedAchievements([]);notify("Đã đặt lại toàn bộ thành tựu")};
@@ -477,13 +556,13 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} toggle={toggle} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
-  else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
-  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onDelete={deleteHabit}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} unlockedAchievements={unlockedAchievements} toggle={toggle} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
-  else if(view==="Lịch") content=<CalendarView habits={habits}/>;
+  else if(view==="Lịch") content=<CalendarView habits={habits} completionHistory={completionHistory}/>;
   else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
-  else if(view==="Thống kê") content=<StatisticsView/>;
+  else if(view==="Thống kê") content=<StatisticsView habits={habits}/>;
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
   else if(view==="Thành tựu") content=<AchievementsView unlockedIds={unlockedAchievements} onReset={resetAchievements}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
@@ -493,7 +572,7 @@ export default function Home() {
     <aside className={mobile ? "sidebar open" : "sidebar"}>
       <button className="brand" onClick={()=>navigate("Tổng quan")}><span><Check /></span>Habit<span>Flow</span></button>
       <nav>{nav.map(([label, Icon]) => <button key={label} className={(view===label||(label==="Thói quen"&&view==="Thêm thói quen")||(label==="Lịch"&&view==="Chi tiết ngày")) ? "active" : ""} onClick={() => navigate(label)}><Icon />{label}</button>)}</nav>
-      <div className="encourage"><Trophy/><strong>Bạn đang làm rất tốt!</strong><p>Hãy duy trì để đạt mục tiêu của mình nhé.</p><a>7 ngày liên tiếp</a><div><i/></div></div>
+      <div className="encourage"><Trophy/><strong>Bắt đầu chuỗi ngày mới!</strong><p>Hoàn thành thói quen mỗi ngày để xây dựng chuỗi của bạn.</p><a>{longestStreak(habits)} ngày liên tiếp</a><div><i style={{width:`${Math.min(100,longestStreak(habits)/7*100)}%`}}/></div></div>
     </aside>
     {mobile && <div className="scrim" onClick={()=>setMobile(false)}/>}
     <main>
@@ -504,6 +583,7 @@ export default function Home() {
       </header>
       <div className="view-shell">{content}</div>
     </main>
+    {progressHabit&&<ProgressModal habit={progressHabit} close={()=>setProgressHabit(null)} save={value=>updateHabitProgress(progressHabit.id,value)}/>}
     {goalModal&&<GoalModal close={()=>{setGoalModal(false);setEditingGoal(null)}} save={saveGoal} goal={editingGoal}/>}
     {toast&&<div className="toast"><CircleCheckBig/>{toast}</div>}
   </div>;
