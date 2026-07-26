@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Chào buổi sáng/ })).toBeVisible();
+  await expect(page.locator(".app")).toHaveAttribute("data-hydrated", "true");
 });
 
 test("dữ liệu mẫu và tất cả màn hình chính hiển thị không lỗi", async ({ page }) => {
