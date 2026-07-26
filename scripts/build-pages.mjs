@@ -32,7 +32,11 @@ try {
     cwd: projectRoot,
     env: {
       ...process.env,
-      GITHUB_PAGES: "true"
+      GITHUB_PAGES: "true",
+      NEXT_PUBLIC_STATIC_PAGES: "true",
+      NEXT_PUBLIC_SYNC_APP_URL:
+        process.env.NEXT_PUBLIC_SYNC_APP_URL ||
+        "https://habitflow-quan-ly-thoi-quen.alibaba0903.chatgpt.site"
     },
     stdio: "inherit"
   });

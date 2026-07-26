@@ -13,6 +13,11 @@ import {
   Database, Palette, Volume2, Trash2, Cloud, CloudOff, RefreshCw
 } from "lucide-react";
 
+const IS_STATIC_PAGES = process.env.NEXT_PUBLIC_STATIC_PAGES === "true";
+const SYNC_APP_URL =
+  process.env.NEXT_PUBLIC_SYNC_APP_URL ||
+  "https://habitflow-quan-ly-thoi-quen.alibaba0903.chatgpt.site";
+
 const seedHabits = [
   { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", streak: 0, rate: 90, category: "Sức khỏe" },
   { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", streak: 0, rate: 86, category: "Sức khỏe" },
@@ -383,37 +388,28 @@ function NotesView({ notes, setNotes, notify }) {
 function SettingsView({ resetData, notify, theme, toggleTheme, sync }) {
   const [reminders,setReminders]=useState(true);
   const [sounds,setSounds]=useState(false);
-  const [token,setToken]=useState("");
   const statusText={
-    disconnected:"Chưa kết nối",
+    signed_out:sync.staticMode?"Mở bản đồng bộ để đăng nhập":"Đăng nhập để bật đồng bộ",
     connecting:"Đang kết nối...",
     saving:"Đang lưu...",
     synced:"Đã đồng bộ",
+    forbidden:"Tài khoản chưa được cấp quyền",
     error:"Đồng bộ gặp lỗi"
-  }[sync.status]||"Chưa kết nối";
-  const submitToken=e=>{
-    e.preventDefault();
-    if(!token.trim())return;
-    sync.connect(token.trim());
-    setToken("");
-  };
+  }[sync.status]||"Đang kiểm tra kết nối";
   return <>
     <PageTitle title="Cài đặt" text="Tùy chỉnh trải nghiệm HabitFlow của bạn."/>
     <div className="settings-grid">
       <section className="settings-card card sync-card">
-        <div className={`settings-icon ${sync.status==="synced"?"green":"purple"}`}>{sync.connected?<Cloud/>:<CloudOff/>}</div>
+        <div className={`settings-icon ${sync.status==="synced"?"green":"purple"}`}>{sync.user?<Cloud/>:<CloudOff/>}</div>
         <div className="sync-copy">
-          <h3>Đồng bộ Google Sheets</h3>
-          <p>Dùng cùng một mã đồng bộ để xem dữ liệu HabitFlow trên mọi thiết bị.</p>
+          <h3>Đồng bộ tự động</h3>
+          <p>{sync.user?`Đang đồng bộ Google Sheets với tài khoản ${sync.user.email}.`:"Đăng nhập một lần trên mỗi thiết bị; HabitFlow sẽ tự tải và tự lưu dữ liệu."}</p>
           <div className={`sync-status ${sync.status}`}><i/>{statusText}{sync.lastSyncedAt&&<span> · {sync.lastSyncedAt}</span>}</div>
-          <form className="sync-form" onSubmit={submitToken}>
-            <input type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder={sync.connected?"Nhập mã mới để thay đổi":"Nhập mã đồng bộ"} aria-label="Mã đồng bộ Google Sheets"/>
-            <button className="primary" type="submit" disabled={!token.trim()}>{sync.connected?"Cập nhật mã":"Kết nối"}</button>
-          </form>
+          {!sync.user&&sync.status!=="connecting"&&<a className="primary sync-login" href={sync.signInUrl}>{sync.staticMode?"Mở bản đồng bộ":"Đăng nhập để đồng bộ"}</a>}
         </div>
         <div className="sync-actions">
-          {sync.connected&&<button className="secondary" onClick={sync.syncNow} disabled={sync.status==="connecting"||sync.status==="saving"}><RefreshCw/> Đồng bộ ngay</button>}
-          {sync.connected&&<button className="secondary danger" onClick={sync.disconnect}><CloudOff/> Ngắt kết nối</button>}
+          {sync.user&&<button className="secondary" onClick={sync.syncNow} disabled={sync.status==="connecting"||sync.status==="saving"}><RefreshCw/> Đồng bộ ngay</button>}
+          {sync.user&&<a className="secondary danger sync-signout" href={sync.signOutUrl}><CloudOff/> Đăng xuất</a>}
         </div>
       </section>
       <section className="settings-card card"><div className="settings-icon purple"><Bell/></div><div><h3>Nhắc nhở thói quen</h3><p>Nhận thông báo theo lịch bạn đã thiết lập.</p></div><button className={reminders?"switch on":"switch"} onClick={()=>{setReminders(!reminders);notify(`Đã ${reminders?"tắt":"bật"} nhắc nhở`)}}><i/></button></section>
@@ -473,10 +469,9 @@ export default function Home() {
   const [query,setQuery]=useState("");
   const [toast,setToast]=useState("");
   const [hydrated,setHydrated]=useState(false);
-  const [syncToken,setSyncToken]=useState("");
-  const [syncStatus,setSyncStatus]=useState("disconnected");
+  const [syncUser,setSyncUser]=useState(null);
+  const [syncStatus,setSyncStatus]=useState("connecting");
   const [syncReady,setSyncReady]=useState(false);
-  const [syncAttempt,setSyncAttempt]=useState(0);
   const [lastSyncedAt,setLastSyncedAt]=useState("");
 
   useEffect(() => {
@@ -507,7 +502,7 @@ export default function Home() {
     setUnlockedAchievements(needsReset?[]:read("habitflow-achievements",DEFAULT_ACHIEVEMENTS));
     if(needsReset)localStorage.setItem("habitflow-reset-version",RESET_VERSION);
     setTheme(localStorage.getItem("habitflow-theme")==="dark"?"dark":"light");
-    setSyncToken(localStorage.getItem("habitflow-sync-token")||"");
+    localStorage.removeItem("habitflow-sync-token");
     setHydrated(true);
   }, []);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits,hydrated]);
@@ -521,8 +516,9 @@ export default function Home() {
   },[theme,hydrated]);
   useEffect(() => {
     if(!hydrated)return;
-    if(!syncToken){
-      setSyncStatus("disconnected");
+
+    if(IS_STATIC_PAGES){
+      setSyncStatus("signed_out");
       setSyncReady(false);
       setLastSyncedAt("");
       return;
@@ -534,11 +530,12 @@ export default function Home() {
 
     const connect=async()=>{
       try{
-        const result=await loadCloudState(syncToken);
+        const result=await loadCloudState();
         if(cancelled)return;
         const cloud=result.state||{};
         const hasCloudData=["habits","completionHistory","goals","notes","unlockedAchievements","theme"].some(key=>cloud[key]!==undefined&&cloud[key]!==null);
         let updatedAt=result.updatedAt;
+        setSyncUser(result.user||null);
 
         if(hasCloudData){
           if(Array.isArray(cloud.habits))setHabits(cloud.habits);
@@ -548,7 +545,7 @@ export default function Home() {
           if(Array.isArray(cloud.unlockedAchievements))setUnlockedAchievements(cloud.unlockedAchievements);
           if(cloud.theme==="light"||cloud.theme==="dark")setTheme(cloud.theme);
         }else{
-          const saved=await saveCloudState(syncToken,{habits,completionHistory,goals,notes,unlockedAchievements,theme});
+          const saved=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
           updatedAt=saved.updatedAt;
         }
 
@@ -558,8 +555,18 @@ export default function Home() {
         setSyncStatus("synced");
       }catch(error){
         if(cancelled)return;
-        console.error("Không thể kết nối đồng bộ:",error);
         setSyncReady(false);
+        setSyncUser(null);
+        if(error.code==="AUTH_REQUIRED"){
+          setSyncStatus("signed_out");
+          return;
+        }
+        if(error.code==="AUTH_FORBIDDEN"){
+          setSyncStatus("forbidden");
+          setToast("Tài khoản này chưa được cấp quyền đồng bộ");
+          return;
+        }
+        console.error("Không thể kết nối đồng bộ:",error);
         setSyncStatus("error");
         setToast(error.message||"Không thể kết nối Google Sheets");
       }
@@ -567,24 +574,28 @@ export default function Home() {
 
     connect();
     return()=>{cancelled=true};
-  },[hydrated,syncToken,syncAttempt]);
+  },[hydrated]);
   useEffect(() => {
-    if(!hydrated||!syncReady||!syncToken)return;
+    if(!hydrated||!syncReady||!syncUser)return;
 
     const timer=setTimeout(async()=>{
       try{
         setSyncStatus("saving");
-        const result=await saveCloudState(syncToken,{habits,completionHistory,goals,notes,unlockedAchievements,theme});
+        const result=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
         setLastSyncedAt(result.updatedAt?new Date(result.updatedAt).toLocaleString("vi-VN"):"Vừa xong");
         setSyncStatus("synced");
       }catch(error){
         console.error("Không thể tự động đồng bộ:",error);
-        setSyncStatus("error");
+        if(error.code==="AUTH_REQUIRED"){
+          setSyncUser(null);
+          setSyncReady(false);
+          setSyncStatus("signed_out");
+        }else setSyncStatus("error");
       }
     },900);
 
     return()=>clearTimeout(timer);
-  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,syncReady,syncToken]);
+  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,syncReady,syncUser]);
   useEffect(() => { window.scrollTo({top:0,behavior:"smooth"}); }, [view]);
   useEffect(() => {
     if(!toast)return;
@@ -593,29 +604,21 @@ export default function Home() {
   },[toast]);
 
   const notify=message=>setToast(message);
-  const connectSync=token=>{
-    localStorage.setItem("habitflow-sync-token",token);
-    setSyncToken(token);
-    setSyncAttempt(value=>value+1);
-  };
-  const disconnectSync=()=>{
-    localStorage.removeItem("habitflow-sync-token");
-    setSyncToken("");
-    setSyncReady(false);
-    setSyncStatus("disconnected");
-    notify("Đã ngắt kết nối Google Sheets");
-  };
   const syncNow=async()=>{
-    if(!syncToken)return;
+    if(!syncUser)return;
     try{
       setSyncStatus("saving");
-      const result=await saveCloudState(syncToken,{habits,completionHistory,goals,notes,unlockedAchievements,theme});
+      const result=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
       setLastSyncedAt(result.updatedAt?new Date(result.updatedAt).toLocaleString("vi-VN"):"Vừa xong");
       setSyncReady(true);
       setSyncStatus("synced");
       notify("Đã đồng bộ dữ liệu lên Google Sheets");
     }catch(error){
-      setSyncStatus("error");
+      if(error.code==="AUTH_REQUIRED"){
+        setSyncUser(null);
+        setSyncReady(false);
+        setSyncStatus("signed_out");
+      }else setSyncStatus("error");
       notify(error.message||"Không thể đồng bộ Google Sheets");
     }
   };
@@ -695,7 +698,7 @@ export default function Home() {
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
   else if(view==="Thành tựu") content=<AchievementsView unlockedIds={unlockedAchievements} onReset={resetAchievements}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
-  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} sync={{token:syncToken,connected:Boolean(syncToken),status:syncStatus,lastSyncedAt,connect:connectSync,disconnect:disconnectSync,syncNow}}/>;
+  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} sync={{user:syncUser,status:syncStatus,lastSyncedAt,syncNow,staticMode:IS_STATIC_PAGES,signInUrl:IS_STATIC_PAGES?`${SYNC_APP_URL}/signin-with-chatgpt?return_to=%2F`:"/signin-with-chatgpt?return_to=%2F",signOutUrl:"/signout-with-chatgpt?return_to=%2F"}}/>;
 
   return <div className={`app ${theme}`} data-hydrated={hydrated?"true":"false"}>
     <aside className={mobile ? "sidebar open" : "sidebar"}>

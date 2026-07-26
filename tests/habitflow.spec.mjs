@@ -34,6 +34,14 @@ test("dữ liệu mẫu và tất cả màn hình chính hiển thị không l�
   expect(errors).toEqual([]);
 });
 
+test("đồng bộ tự động không yêu cầu nhập mã trên từng thiết bị", async ({ page }) => {
+  await page.locator("aside nav").getByRole("button", { name: "Cài đặt", exact: true }).click();
+
+  await expect(page.getByRole("heading", { name: "Đồng bộ tự động" })).toBeVisible();
+  await expect(page.getByLabel("Mã đồng bộ Google Sheets")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Đăng nhập để đồng bộ" })).toBeVisible();
+});
+
 test("tìm kiếm, thêm thói quen và lưu qua lần tải lại", async ({ page }) => {
   const search = page.getByPlaceholder("Tìm thói quen...");
   await search.fill("Uống 2 lít nước");

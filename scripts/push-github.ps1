@@ -24,7 +24,7 @@ try {
   $stagedFiles = @(& git @gitConfig diff --cached --name-only)
   $sensitiveFiles = @(
     $stagedFiles | Where-Object {
-      $_ -match '(^|/)\.env($|\.)' -or
+      ($_ -match '(^|/)\.env($|\.)' -and $_ -ne '.env.example') -or
       $_ -match 'service[-_]?account.*\.json$' -or
       $_ -match 'habitflow-\d+-[a-z0-9]+\.json$'
     }

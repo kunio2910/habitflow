@@ -1,4 +1,5 @@
 import { readSheetValues, updateSheetValues } from "../../../lib/googleSheets.js";
+import { getChatGPTUser } from "../../chatgpt-auth.js";
 
 export const dynamic = "force-dynamic";
 
@@ -11,24 +12,47 @@ const STATE_KEYS = [
   "theme"
 ];
 
-function safeEqual(received, expected) {
-  if (!received || !expected || received.length !== expected.length) return false;
-
-  let difference = 0;
-  for (let index = 0; index < received.length; index += 1) {
-    difference |= received.charCodeAt(index) ^ expected.charCodeAt(index);
-  }
-
-  return difference === 0;
+function allowedEmails() {
+  return new Set(
+    (process.env.HABITFLOW_ALLOWED_EMAILS || "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean)
+  );
 }
 
-function isAuthorized(request) {
-  const authorization = request.headers.get("authorization") || "";
-  const token = authorization.startsWith("Bearer ")
-    ? authorization.slice(7)
-    : "";
+async function authorizeUser() {
+  const user = await getChatGPTUser();
 
-  return safeEqual(token, process.env.HABITFLOW_SYNC_TOKEN || "");
+  if (!user) {
+    return {
+      response: Response.json(
+        { error: "Vui lòng đăng nhập để đồng bộ", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      )
+    };
+  }
+
+  const allowed = allowedEmails();
+  if (allowed.size === 0) {
+    return {
+      response: Response.json(
+        { error: "Đồng bộ chưa được cấu hình", code: "AUTH_NOT_CONFIGURED" },
+        { status: 503 }
+      )
+    };
+  }
+
+  if (!allowed.has(user.email.trim().toLowerCase())) {
+    return {
+      response: Response.json(
+        { error: "Tài khoản này chưa được cấp quyền đồng bộ", code: "AUTH_FORBIDDEN" },
+        { status: 403 }
+      )
+    };
+  }
+
+  return { user };
 }
 
 async function readState() {
@@ -52,15 +76,20 @@ async function readState() {
   return { state, updatedAt };
 }
 
-export async function GET(request) {
-  if (!isAuthorized(request)) {
-    return Response.json({ error: "Mã đồng bộ không đúng" }, { status: 401 });
-  }
+export async function GET() {
+  const authorization = await authorizeUser();
+  if (authorization.response) return authorization.response;
 
   try {
     const result = await readState();
 
-    return Response.json(result, {
+    return Response.json({
+      ...result,
+      user: {
+        email: authorization.user.email,
+        displayName: authorization.user.displayName
+      }
+    }, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
@@ -73,9 +102,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  if (!isAuthorized(request)) {
-    return Response.json({ error: "Mã đồng bộ không đúng" }, { status: 401 });
-  }
+  const authorization = await authorizeUser();
+  if (authorization.response) return authorization.response;
 
   try {
     const payload = await request.json();
@@ -110,7 +138,14 @@ export async function POST(request) {
 
     await updateSheetValues(`State!A1:C${rows.length}`, rows);
 
-    return Response.json({ ok: true, updatedAt });
+    return Response.json({
+      ok: true,
+      updatedAt,
+      user: {
+        email: authorization.user.email,
+        displayName: authorization.user.displayName
+      }
+    });
   } catch (error) {
     console.error("Không thể ghi Google Sheets:", error);
     return Response.json(
