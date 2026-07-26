@@ -7,7 +7,8 @@
     "build": "vinext build && node scripts/prepare-sites.mjs",
     "build:pages": "next build",
     "start": "vinext start",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "github:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/push-github.ps1"
   },
   "dependencies": {
     "googleapis": "^173.0.0",
