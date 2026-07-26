@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "vinext build && node scripts/prepare-sites.mjs",
-    "build:pages": "next build",
+    "build:pages": "node scripts/build-pages.mjs",
     "start": "vinext start",
     "test:e2e": "playwright test",
     "github:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/push-github.ps1"
