@@ -30,6 +30,24 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Require GitHub Actions as Pages source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type="$(
+            curl --fail --silent --show-error \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages" |
+              jq --raw-output '.build_type'
+          )"
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error::GitHub Pages đang dùng Deploy from a branch (${build_type}). Hãy đổi Settings → Pages → Source thành GitHub Actions."
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
@@ -67,6 +85,8 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
+          # Chờ CDN ổn định để phát hiện cả trường hợp deployment khác ghi đè.
+          sleep 30
           for attempt in {1..12}; do
             status="$(curl --silent --location --output /tmp/habitflow.html --write-out '%{http_code}' "${PAGE_URL}")"
             if [ "$status" = "200" ] && grep -q '<title' /tmp/habitflow.html; then
