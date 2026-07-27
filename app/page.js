@@ -77,10 +77,6 @@ function completedHabitsForDay(habits, completionHistory, day) {
   return habits.filter(h => ids.has(h.id));
 }
 
-function totalCompletions(completionHistory) {
-  return Object.values(completionHistory).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0);
-}
-
 const IconMap = {
   water: Droplets, sport: Dumbbell, book: BookOpen, brain: Brain,
   language: Languages, journal: NotebookPen, candy: CandyOff, moon: Moon
@@ -131,7 +127,7 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, openProgress, openAdd, setView, onSelectDate }) {
+function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
   const completedHabits=habits.filter(h=>h.done);
   const done = completedHabits.length;
   const percent = Math.round(done / habits.length * 100) || 0;
@@ -139,23 +135,20 @@ function Overview({ habits, completionHistory, openProgress, openAdd, setView, o
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
-    <section className="stats">
-      <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent} extra={completedHabits.length?<div className="completed-icons">{completedHabits.map(h=><HabitIcon habit={h} key={h.id}/>)}</div>:<div className="completed-icons empty">Chưa có thói quen hoàn thành</div>}/>
-      <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
-      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
-    </section>
-    <section className="dashboard-grid single">
+    <section className="dashboard-grid home-progress-grid">
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
           <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
         </SectionHead>
         <div className="progress"><i style={{width:`${percent}%`}}/></div>
+        {completedHabits.length>0&&<div className="today-completed"><span>Đã hoàn thành</span><div className="completed-icons">{completedHabits.map(h=><HabitIcon habit={h} key={h.id}/>)}</div></div>}
         <div className="habit-list">{shown.map(h => <div className="habit" key={h.id}>
           <HabitIcon habit={h}/><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
           <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={()=>openProgress(h)}><Ring value={h.progress} size={44}/></button>
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
+      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
     </section>
     <ReportSummary habits={habits}/>
   </>;
@@ -672,7 +665,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;

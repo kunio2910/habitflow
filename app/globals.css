@@ -68,4 +68,9 @@ main{margin-left:238px;max-width:1580px;padding:0 46px 60px}header{height:68px;d
 body.dark-mode .completed-icons .habit-icon{border-color:#181a24}
 .ring.complete{background:conic-gradient(var(--green) var(--p),#e5f7ed 0)}
 .ring.complete span{color:var(--green)}
+.home-progress-grid{grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);align-items:start}
+.today-completed{display:flex;align-items:center;gap:14px;padding:11px 0 12px;border-bottom:1px solid var(--border)}
+.today-completed>span{color:var(--muted);font-size:9px;font-weight:600;white-space:nowrap}
+.today-completed .completed-icons{margin:0;max-width:none}
+@media(max-width:1100px){.home-progress-grid{grid-template-columns:1fr}.home-progress-grid .calendar.compact{grid-column:auto}}
 @media(max-width:800px){.day-summary{grid-template-columns:1fr}.reset-achievements{font-size:0;padding:11px}.reset-achievements svg{margin:0}}
