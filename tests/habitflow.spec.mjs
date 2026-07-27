@@ -146,12 +146,16 @@ test("ngày chưa có dữ liệu không tự động hiển thị hoàn thành"
 });
 
 test("lịch ngày phản ánh đúng thao tác hoàn thành và bỏ hoàn thành", async ({ page }) => {
-  await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
+  await page.getByRole("button", { name: "Cập nhật tiến độ Viết nhật ký" }).click();
+  await page.getByLabel("Phần trăm tiến độ").fill("100");
+  await page.getByRole("button", { name: "Lưu tiến độ" }).click();
   await page.getByRole("button", { name: `Xem thói quen hoàn thành ${dayLabel(today)}` }).click();
   await expect(page.getByRole("heading", { name: fullDateLabel(today) })).toBeVisible();
   await expect(page.getByText("Viết nhật ký", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Quay lại Tổng quan/ }).click();
-  await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
+  await page.getByRole("button", { name: "Cập nhật tiến độ Viết nhật ký" }).click();
+  await page.getByLabel("Phần trăm tiến độ").fill("0");
+  await page.getByRole("button", { name: "Lưu tiến độ" }).click();
   await page.getByRole("button", { name: `Xem thói quen hoàn thành ${dayLabel(today)}` }).click();
   await expect(page.getByText("Viết nhật ký", { exact: true })).toHaveCount(0);
 });

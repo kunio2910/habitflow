@@ -101,7 +101,7 @@ function HabitIcon({ habit, icon, color }) {
 }
 
 function Ring({ value, size = 54 }) {
-  return <div className="ring" style={{ "--p": `${value * 3.6}deg`, width: size, height: size }}><span>{value}%</span></div>;
+  return <div className={value>=100?"ring complete":"ring"} style={{ "--p": `${value * 3.6}deg`, width: size, height: size }}><span>{value}%</span></div>;
 }
 
 function StatCard({ label, value, sub, icon: Icon, tone, ring, delta, extra }) {
@@ -131,7 +131,7 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, toggle, openProgress, openAdd, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, openProgress, openAdd, setView, onSelectDate }) {
   const completedHabits=habits.filter(h=>h.done);
   const done = completedHabits.length;
   const percent = Math.round(done / habits.length * 100) || 0;
@@ -140,7 +140,7 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="stats">
-      <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent} extra={completedHabits.length?<div className="completed-icons">{completedHabits.slice(0,5).map(h=><HabitIcon habit={h} key={h.id}/>)}{completedHabits.length>5&&<span>+{completedHabits.length-5}</span>}</div>:<div className="completed-icons empty">Chưa có thói quen hoàn thành</div>}/>
+      <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent} extra={completedHabits.length?<div className="completed-icons">{completedHabits.map(h=><HabitIcon habit={h} key={h.id}/>)}</div>:<div className="completed-icons empty">Chưa có thói quen hoàn thành</div>}/>
       <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
       <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
     </section>
@@ -152,8 +152,7 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
         <div className="progress"><i style={{width:`${percent}%`}}/></div>
         <div className="habit-list">{shown.map(h => <div className="habit" key={h.id}>
           <HabitIcon habit={h}/><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
-          <QuickProgress habit={h} onSave={openProgress.quickSave}/>
-          {h.progress > 0 && h.progress < 100 ? <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={()=>openProgress.openModal(h)}><Ring value={h.progress} size={44}/></button> : <button aria-label={`Đánh dấu hoàn thành ${h.name}`} className={h.done?"check done":"check"} onClick={()=>toggle(h.id)}>{h.done&&<Check/>}</button>}
+          <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={()=>openProgress(h)}><Ring value={h.progress} size={44}/></button>
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
@@ -177,17 +176,6 @@ function CalendarMini({ setView, onSelectDate }) {
       {dates.map(date=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><span>{date.getDate()}</span></button>)}
     </div>
   </div>;
-}
-
-function QuickProgress({ habit, onSave }) {
-  const [value,setValue]=useState(String(habit.progress||0));
-  useEffect(()=>setValue(String(habit.progress||0)),[habit.progress]);
-  const commit=()=>{
-    const progress=Math.min(100,Math.max(0,Number(value)||0));
-    setValue(String(progress));
-    if(progress!==Number(habit.progress||0))onSave(habit.id,progress);
-  };
-  return <label className="quick-progress"><input aria-label={`Phần trăm hoàn thành ${habit.name}`} type="number" min="0" max="100" value={value} onChange={event=>setValue(event.target.value)} onBlur={commit} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();event.currentTarget.blur()}}}/><span>%</span></label>;
 }
 
 function resetHabitRates(habits) {
@@ -634,14 +622,6 @@ export default function Home() {
       return {...history,[dateKey()]:[...ids]};
     });
   };
-  const toggle = id => {
-    const habit=habits.find(h=>h.id===id);
-    if(!habit)return;
-    const done=!habit.done;
-    setHabits(habits.map(h => h.id === id ? {...h,done,progress:done?100:0,detail:done?"Đã hoàn thành":"Chưa thực hiện"} : h));
-    recordCompletion(id,done);
-    notify("Đã cập nhật tiến độ");
-  };
   const updateHabitProgress=(id,value)=>{
     const progress=Math.min(100,Math.max(0,Number(value)||0));
     const done=progress===100;
@@ -692,7 +672,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} toggle={toggle} openProgress={{openModal:setProgressHabit,quickSave:updateHabitProgress}} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
