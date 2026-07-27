@@ -43,10 +43,26 @@ const notesSeed = [
 
 const SAMPLE_VERSION = "habitflow-sample-v2";
 const RESET_VERSION = "habitflow-reset-progress-v1";
-const CURRENT_DATE_KEY = "2026-07-24";
+const CURRENT_DATE = new Date();
 
-function dateKey(day) {
-  return `2026-07-${String(day).padStart(2,"0")}`;
+function dateKey(value = CURRENT_DATE) {
+  const date=value instanceof Date?value:new Date(CURRENT_DATE.getFullYear(),CURRENT_DATE.getMonth(),value);
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+
+function formatVietnameseDate(date, options) {
+  return new Intl.DateTimeFormat("vi-VN",options).format(date);
+}
+
+function currentWeekDates(reference = CURRENT_DATE) {
+  const monday=new Date(reference);
+  const day=monday.getDay()||7;
+  monday.setDate(monday.getDate()-day+1);
+  return [...Array(7)].map((_,index)=>{
+    const date=new Date(monday);
+    date.setDate(monday.getDate()+index);
+    return date;
+  });
 }
 
 function completedHabitsForDay(habits, completionHistory, day) {
@@ -114,12 +130,13 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
   const [filter, setFilter] = useState("Tất cả");
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
-    <PageTitle eyebrow="THỨ SÁU, 24 THÁNG 7" title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="stats">
       <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
       <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
+      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
     </section>
-    <section className="dashboard-grid">
+    <section className="dashboard-grid single">
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
           <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
@@ -131,19 +148,17 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
-      <div className="right-col">
-        <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
-      </div>
     </section>
     <ReportSummary habits={habits}/>
   </>;
 }
 
 function CalendarMini({ setView, onSelectDate }) {
-  return <div className="calendar card">
+  const dates=currentWeekDates();
+  return <div className="calendar compact card">
     <SectionHead title="Lịch"><button className="link" onClick={()=>setView("Lịch")}>Xem đầy đủ</button></SectionHead>
-    <div className="month"><ChevronLeft/><strong>Tháng 7, 2026</strong><ChevronRight/></div>
-    <div className="days">{week.map(d=><b key={d}>{d}</b>)}{[...Array(31)].map((_,i)=><button aria-label={`Xem thói quen hoàn thành ngày ${i+1} tháng 7`} onClick={()=>onSelectDate(i+1)} className={i+1===24?"current":""} key={i}>{i+1}</button>)}</div>
+    <div className="compact-month">{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</div>
+    <div className="compact-days">{dates.map((date,index)=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><b>{week[index]}</b><span>{date.getDate()}</span></button>)}</div>
   </div>;
 }
 
@@ -152,7 +167,7 @@ function DayDetailView({ habits, completionHistory, day, onBack }) {
   const rate=Math.round((completed.length/Math.max(habits.length,1))*100);
   return <>
     <button className="back-btn" onClick={onBack}><ArrowLeft/> Quay lại Tổng quan</button>
-    <PageTitle title={`Ngày ${day} tháng 7, 2026`} text="Những thói quen đã được hoàn thành trong ngày này."/>
+    <PageTitle title={formatVietnameseDate(day,{day:"numeric",month:"long",year:"numeric"})} text="Những thói quen đã được hoàn thành trong ngày này."/>
     <section className="day-summary">
       <StatCard label="Đã hoàn thành" value={`${completed.length} / ${habits.length}`} sub="thói quen" ring={rate}/>
       <StatCard label="Tỷ lệ hoàn thành" value={`${rate}%`} sub="trong ngày" icon={TrendingUp} tone="blue"/>
@@ -228,7 +243,7 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
       <fieldset><legend>Danh mục</legend><div className="category-picks">{categories.map(([name,I])=><button type="button" onClick={()=>set("category",name)} className={form.category===name?"selected":""} key={name}><I/><span>{name}</span></button>)}</div></fieldset>
       <fieldset><legend>Tần suất</legend><div className="choice-row">{["Hàng ngày","Hàng tuần","Tùy chọn"].map(x=><button type="button" onClick={()=>set("frequency",x)} className={form.frequency===x?"selected":""} key={x}><CalendarCheck/>{x}</button>)}</div></fieldset>
       <fieldset><legend>Thời gian</legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>set("time",a)} className={form.time===a?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small></button>)}</div></fieldset>
-      <div className="form-split"><label>Nhắc nhở<span className="switch-line"><input type="time" defaultValue="08:00"/><button type="button" className={form.reminder?"switch on":"switch"} onClick={()=>set("reminder",!form.reminder)}><i/></button></span></label><label>Ngày bắt đầu<input type="date" defaultValue="2026-07-24"/></label></div>
+      <div className="form-split"><label>Nhắc nhở<span className="switch-line"><input type="time" defaultValue="08:00"/><button type="button" className={form.reminder?"switch on":"switch"} onClick={()=>set("reminder",!form.reminder)}><i/></button></span></label><label>Ngày bắt đầu<input type="date" defaultValue={dateKey()}/></label></div>
       <fieldset><legend>Mục tiêu</legend><div className="goal-options">{["Không có mục tiêu","Số lượng","Thời gian"].map(x=><label key={x}><input type="radio" checked={form.goal===x} onChange={()=>set("goal",x)}/>{x}{x===form.goal&&x!=="Không có mục tiêu"&&<><input className="mini-input" value={form.amount} onChange={e=>set("amount",e.target.value)}/><span>{x==="Thời gian"?"phút":"lần"}</span></>}</label>)}</div></fieldset>
       <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&onSave(form)}><Save/> {initialHabit?"Lưu thay đổi":"Lưu thói quen"}</button></div>
     </div>
@@ -236,15 +251,15 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
 }
 
 function CalendarView({ habits, completionHistory }) {
-  const dates=[20,21,22,23,24,25,26];
-  const completedCount=dates.reduce((total,day)=>total+(completionHistory[dateKey(day)]?.length||0),0);
+  const dates=currentWeekDates();
+  const completedCount=dates.reduce((total,date)=>total+(completionHistory[dateKey(date)]?.length||0),0);
   const completionRate=Math.round(completedCount/Math.max(habits.length*dates.length,1)*100);
   return <>
     <PageTitle title="Lịch thói quen" text="Theo dõi mức độ duy trì của bạn theo từng ngày." action={<div className="segmented"><button className="active">Tuần</button><button>Tháng</button><button>Hôm nay</button></div>}/>
-    <div className="calendar-range"><ChevronLeft/><strong>20 - 26 Tháng 7, 2026</strong><ChevronRight/></div>
+    <div className="calendar-range"><ChevronLeft/><strong>{formatVietnameseDate(dates[0],{day:"numeric",month:"long"})} - {formatVietnameseDate(dates[6],{day:"numeric",month:"long",year:"numeric"})}</strong><ChevronRight/></div>
     <div className="habit-calendar card">
-      <div className="calendar-head"><span></span>{week.map((d,i)=><b className={i===4?"today-col":""} key={d}>{d}<small>{dates[i]}/7</small></b>)}</div>
-      {habits.map(h=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{dates.map((day,c)=><span className={c===4?"today-col":""} key={day}>{completionHistory[dateKey(day)]?.includes(h.id)?<CircleCheckBig/>:<i/>}</span>)}</div>)}
+      <div className="calendar-head"><span></span>{week.map((d,i)=><b className={dateKey(dates[i])===dateKey()?"today-col":""} key={d}>{d}<small>{dates[i].getDate()}/{dates[i].getMonth()+1}</small></b>)}</div>
+      {habits.map(h=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{dates.map(date=><span className={dateKey(date)===dateKey()?"today-col":""} key={dateKey(date)}>{completionHistory[dateKey(date)]?.includes(h.id)?<CircleCheckBig/>:<i/>}</span>)}</div>)}
     </div>
     <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành",`${completionRate}%`,"Dữ liệu thực tế"],["Tổng hoàn thành",`${completedCount} / ${habits.length*dates.length}`,""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
   </>;
@@ -306,7 +321,7 @@ function NotesView({ notes, setNotes, notify }) {
       setNotes(notes.map(n=>n.id===editingNote.id?{...n,title:title.trim(),body:body.trim()||"Chưa có nội dung."}:n));
       notify("Đã cập nhật ghi chú");
     }else{
-      setNotes([{id:Date.now(),title:title.trim(),body:body.trim()||"Chưa có nội dung.",date:"24/07/2026",color:"purple"},...notes]);
+      setNotes([{id:Date.now(),title:title.trim(),body:body.trim()||"Chưa có nội dung.",date:formatVietnameseDate(CURRENT_DATE,{day:"2-digit",month:"2-digit",year:"numeric"}),color:"purple"},...notes]);
       notify("Đã tạo ghi chú mới");
     }
     setTitle("");setBody("");setEditingNote(null);
@@ -380,7 +395,7 @@ export default function Home() {
   const [goals, setGoals] = useState(goalsSeed);
   const [notes, setNotes] = useState(notesSeed);
   const [theme,setTheme]=useState("light");
-  const [selectedDay,setSelectedDay]=useState(24);
+  const [selectedDay,setSelectedDay]=useState(CURRENT_DATE);
   const [view, setView] = useState("Tổng quan");
   const [editingHabit,setEditingHabit]=useState(null);
   const [progressHabit,setProgressHabit]=useState(null);
@@ -416,7 +431,7 @@ export default function Home() {
       localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
     } else setHabits(normalizedHabits);
     const storedHistory=readObject("habitflow-completion-history",null);
-    setCompletionHistory(storedHistory||{[CURRENT_DATE_KEY]:normalizedHabits.filter(h=>h.done).map(h=>h.id)});
+    setCompletionHistory(storedHistory||{[dateKey()]:normalizedHabits.filter(h=>h.done).map(h=>h.id)});
     setGoals(read("habitflow-goals",goalsSeed));
     setNotes(read("habitflow-notes",notesSeed));
     localStorage.removeItem("habitflow-achievements");
@@ -582,9 +597,9 @@ export default function Home() {
   };
   const recordCompletion=(id,done)=>{
     setCompletionHistory(history=>{
-      const ids=new Set(history[CURRENT_DATE_KEY]||[]);
+      const ids=new Set(history[dateKey()]||[]);
       if(done)ids.add(id);else ids.delete(id);
-      return {...history,[CURRENT_DATE_KEY]:[...ids]};
+      return {...history,[dateKey()]:[...ids]};
     });
   };
   const toggle = id => {
@@ -626,7 +641,7 @@ export default function Home() {
   };
   const resetData=()=>{
     setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);
-    setCompletionHistory({[CURRENT_DATE_KEY]:seedHabits.filter(h=>h.done).map(h=>h.id)});
+    setCompletionHistory({[dateKey()]:seedHabits.filter(h=>h.done).map(h=>h.id)});
     localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
     localStorage.setItem("habitflow-reset-version",RESET_VERSION);
     notify("Đã khôi phục dữ liệu mẫu");

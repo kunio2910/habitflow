@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+const today=new Date();
+const tomorrow=new Date(today);
+tomorrow.setDate(today.getDate()+1);
+const dayLabel=date=>new Intl.DateTimeFormat("vi-VN",{day:"numeric",month:"long"}).format(date);
+const fullDateLabel=date=>new Intl.DateTimeFormat("vi-VN",{day:"numeric",month:"long",year:"numeric"}).format(date);
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Chào buổi sáng/ })).toBeVisible();
@@ -133,20 +139,20 @@ test("giao diện tối được ghi nhớ", async ({ page }) => {
 });
 
 test("ngày chưa có dữ liệu không tự động hiển thị hoàn thành", async ({ page }) => {
-  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 23 tháng 7" }).click();
-  await expect(page.getByRole("heading", { name: "Ngày 23 tháng 7, 2026" })).toBeVisible();
+  await page.getByRole("button", { name: `Xem thói quen hoàn thành ${dayLabel(tomorrow)}` }).click();
+  await expect(page.getByRole("heading", { name: fullDateLabel(tomorrow) })).toBeVisible();
   await expect(page.locator(".completed-list")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Chưa có thói quen hoàn thành" })).toBeVisible();
 });
 
 test("lịch ngày phản ánh đúng thao tác hoàn thành và bỏ hoàn thành", async ({ page }) => {
   await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
-  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 24 tháng 7" }).click();
-  await expect(page.getByRole("heading", { name: "Ngày 24 tháng 7, 2026" })).toBeVisible();
+  await page.getByRole("button", { name: `Xem thói quen hoàn thành ${dayLabel(today)}` }).click();
+  await expect(page.getByRole("heading", { name: fullDateLabel(today) })).toBeVisible();
   await expect(page.getByText("Viết nhật ký", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Quay lại Tổng quan/ }).click();
   await page.getByRole("button", { name: "Đánh dấu hoàn thành Viết nhật ký" }).click();
-  await page.getByRole("button", { name: "Xem thói quen hoàn thành ngày 24 tháng 7" }).click();
+  await page.getByRole("button", { name: `Xem thói quen hoàn thành ${dayLabel(today)}` }).click();
   await expect(page.getByText("Viết nhật ký", { exact: true })).toHaveCount(0);
 });
 
