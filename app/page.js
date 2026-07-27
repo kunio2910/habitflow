@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadCloudState, saveCloudState } from "../lib/habitflowSync.js";
 import { loadDataFromGoogle, saveDataToGoogle } from "./lib/googleSheets";
 import {
@@ -390,6 +390,14 @@ function NotesView({ notes, setNotes, notify }) {
 function SettingsView({ resetData, notify, theme, toggleTheme, sync, manualSync }) {
   const [reminders,setReminders]=useState(true);
   const [sounds,setSounds]=useState(false);
+  const appsScriptStatusText={
+    waiting:"Đang chờ lưu thay đổi...",
+    saving:"Đang tự động lưu...",
+    loading:"Đang khôi phục...",
+    synced:"Đã tự động lưu",
+    error:"Tự động lưu thất bại"
+  }[manualSync.status]||"Tự động lưu đang bật";
+  const appsScriptBusy=["waiting","saving","loading"].includes(manualSync.status);
   const statusText={
     signed_out:sync.staticMode?"Mở bản đồng bộ để đăng nhập":"Đăng nhập để bật đồng bộ",
     connecting:"Đang kết nối...",
@@ -414,8 +422,8 @@ function SettingsView({ resetData, notify, theme, toggleTheme, sync, manualSync 
           {sync.user&&<a className="secondary danger sync-signout" href={sync.signOutUrl}><CloudOff/> Đăng xuất</a>}
         </div>
       </section>
-      <section className="settings-card card"><div className="settings-icon purple"><CloudUpload/></div><div><h3>Sao lưu bằng Apps Script</h3><p>Lưu toàn bộ dữ liệu JSON qua endpoint Google Apps Script cá nhân.</p></div><button className="secondary" disabled={manualSync.status!==""} onClick={manualSync.backup}><CloudUpload/> {manualSync.status==="saving"?"Đang lưu...":"Sao lưu"}</button></section>
-      <section className="settings-card card"><div className="settings-icon blue"><CloudDownload/></div><div><h3>Khôi phục bằng Apps Script</h3><p>Tải bản JSON gần nhất từ trang tính Storage.</p></div><button className="secondary" disabled={manualSync.status!==""} onClick={manualSync.restore}><CloudDownload/> {manualSync.status==="loading"?"Đang tải...":"Khôi phục"}</button></section>
+      <section className="settings-card card"><div className="settings-icon purple"><CloudUpload/></div><div><h3>Tự động lưu bằng Apps Script</h3><p>Mọi chỉnh sửa được lưu dạng JSON sau 1,5 giây. {appsScriptStatusText}</p></div><button className="secondary" disabled={appsScriptBusy} onClick={manualSync.backup}><CloudUpload/> {manualSync.status==="saving"?"Đang lưu...":"Lưu ngay"}</button></section>
+      <section className="settings-card card"><div className="settings-icon blue"><CloudDownload/></div><div><h3>Khôi phục bằng Apps Script</h3><p>Tải bản JSON gần nhất từ trang tính Storage.</p></div><button className="secondary" disabled={appsScriptBusy} onClick={manualSync.restore}><CloudDownload/> {manualSync.status==="loading"?"Đang tải...":"Khôi phục"}</button></section>
       <section className="settings-card card"><div className="settings-icon purple"><Bell/></div><div><h3>Nhắc nhở thói quen</h3><p>Nhận thông báo theo lịch bạn đã thiết lập.</p></div><button className={reminders?"switch on":"switch"} onClick={()=>{setReminders(!reminders);notify(`Đã ${reminders?"tắt":"bật"} nhắc nhở`)}}><i/></button></section>
       <section className="settings-card card"><div className="settings-icon blue"><Volume2/></div><div><h3>Âm thanh hoàn thành</h3><p>Phát âm thanh nhỏ khi bạn hoàn thành thói quen.</p></div><button className={sounds?"switch on":"switch"} onClick={()=>{setSounds(!sounds);notify(`Đã ${sounds?"tắt":"bật"} âm thanh`)}}><i/></button></section>
       <section className="settings-card card"><div className="settings-icon orange">{theme==="dark"?<Moon/>:<Sun/>}</div><div><h3>Giao diện</h3><p>{theme==="dark"?"Chế độ tối đang được sử dụng.":"Chế độ sáng đang được sử dụng."}</p></div><button className="secondary" onClick={toggleTheme}>{theme==="dark"?"Chuyển sáng":"Chuyển tối"}</button></section>
@@ -478,6 +486,7 @@ export default function Home() {
   const [syncReady,setSyncReady]=useState(false);
   const [lastSyncedAt,setLastSyncedAt]=useState("");
   const [manualSyncStatus,setManualSyncStatus]=useState("");
+  const appsScriptSnapshotRef=useRef(null);
 
   useEffect(() => {
     const read=(key,fallback)=>{
@@ -601,6 +610,41 @@ export default function Home() {
 
     return()=>clearTimeout(timer);
   },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,syncReady,syncUser]);
+  useEffect(() => {
+    if(!hydrated)return;
+
+    const data={version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme};
+    const snapshot=JSON.stringify(data);
+
+    // Ghi nhận trạng thái đầu tiên sau khi đọc localStorage, không tự ghi đè
+    // Google Sheets ngay lúc vừa mở trang.
+    if(appsScriptSnapshotRef.current===null){
+      appsScriptSnapshotRef.current=snapshot;
+      return;
+    }
+    if(snapshot===appsScriptSnapshotRef.current)return;
+
+    let cancelled=false;
+    setManualSyncStatus("waiting");
+    const timer=setTimeout(async()=>{
+      try{
+        setManualSyncStatus("saving");
+        await saveDataToGoogle(data);
+        if(cancelled)return;
+        appsScriptSnapshotRef.current=snapshot;
+        setManualSyncStatus("synced");
+      }catch(error){
+        if(cancelled)return;
+        console.error("Không thể tự động lưu qua Apps Script:",error);
+        setManualSyncStatus("error");
+      }
+    },1500);
+
+    return()=>{
+      cancelled=true;
+      clearTimeout(timer);
+    };
+  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated]);
   useEffect(() => { window.scrollTo({top:0,behavior:"smooth"}); }, [view]);
   useEffect(() => {
     if(!toast)return;
