@@ -15,16 +15,16 @@ import {
 } from "lucide-react";
 
 const seedHabits = [
-  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", rate: 90, category: "Sức khỏe" },
-  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", rate: 86, category: "Sức khỏe" },
-  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", rate: 93, category: "Học tập" },
-  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", rate: 71, category: "Phát triển bản thân" },
-  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", rate: 57, category: "Học tập" },
+  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", rate: 0, category: "Sức khỏe" },
+  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", rate: 0, category: "Sức khỏe" },
+  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", rate: 0, category: "Học tập" },
+  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", rate: 0, category: "Phát triển bản thân" },
+  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", rate: 0, category: "Học tập" },
   { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", rate: 0, category: "Phát triển bản thân" },
-  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", rate: 28, category: "Sức khỏe" },
-  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", rate: 43, category: "Sức khỏe" },
-  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", rate: 82, category: "Sức khỏe" },
-  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", rate: 74, category: "Học tập" }
+  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", rate: 0, category: "Sức khỏe" },
+  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", rate: 0, category: "Sức khỏe" },
+  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", rate: 0, category: "Sức khỏe" },
+  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", rate: 0, category: "Học tập" }
 ];
 
 const goalsSeed = [
@@ -162,6 +162,10 @@ function CalendarMini({ setView, onSelectDate }) {
   </div>;
 }
 
+function resetHabitRates(habits) {
+  return habits.map(habit=>({...habit,rate:0}));
+}
+
 function DayDetailView({ habits, completionHistory, day, onBack }) {
   const completed=completedHabitsForDay(habits,completionHistory,day);
   const rate=Math.round((completed.length/Math.max(habits.length,1))*100);
@@ -184,7 +188,7 @@ function ReportSummary({ habits }) {
   return <section className="reports card">
     <SectionHead title="Báo cáo" label="PHÂN TÍCH TIẾN ĐỘ"><div className="tabs">{["Tuần","Tháng","Năm"].map(t=><button className={report===t?"selected":""} key={t} onClick={()=>setReport(t)}>{t}</button>)}</div></SectionHead>
     <div className="report-grid">
-      <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">78% <span>↗ 12% so với {report.toLowerCase()} trước</span></div><MiniLine/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
+      <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">0%</div><MiniLine values={[0,0,0,0,0,0,0]}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
       <HabitBars habits={habits}/>
       <CategoryDonut/>
     </div>
@@ -192,11 +196,11 @@ function ReportSummary({ habits }) {
 }
 
 function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
-  return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${Math.max(h.rate, 15)}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
+  return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${h.rate}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
 }
 
 function CategoryDonut() {
-  return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut"/><div className="legend">{[["Sức khỏe","40%","blue"],["Học tập","25%","green"],["Phát triển","20%","orange"],["Công việc","10%","purple"],["Khác","5%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
+  return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut empty"/><div className="legend">{[["Sức khỏe","0%","blue"],["Học tập","0%","green"],["Phát triển","0%","orange"],["Công việc","0%","purple"],["Khác","0%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
 function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" }) {
@@ -270,13 +274,13 @@ function ReportsView({ habits }) {
   return <>
     <PageTitle title="Báo cáo" text="Bức tranh tổng quan về hành trình xây dựng thói quen." action={<div className="tabs">{["Tuần","Tháng","Năm","Tùy chỉnh"].map(x=><button onClick={()=>setPeriod(x)} className={period===x?"selected":""} key={x}>{x}</button>)}</div>}/>
     <section className="stats report-stats">
-      <StatCard label="Tỷ lệ hoàn thành trung bình" value="85%" sub="" delta="+12%"/>
-      <StatCard label="Tổng thói quen hoàn thành" value="156" sub="lần"/>
+      <StatCard label="Tỷ lệ hoàn thành trung bình" value="0%" sub=""/>
+      <StatCard label="Tổng thói quen hoàn thành" value="0" sub="lần"/>
     </section>
     <div className="report-grid standalone">
-      <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={[48,65,62,80,91,72,79]}/><div className="chart-labels">{["18/5","19/5","20/5","21/5","22/5","23/5","24/5"].map(x=><span key={x}>{x}</span>)}</div></div>
+      <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={[0,0,0,0,0,0,0]}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
       <CategoryDonut/>
-      <div className="report-card card"><p>Thói quen hàng đầu</p><div className="ranking">{habits.slice(0,3).map((h,i)=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{12-i*2} ngày</strong></div>)}</div></div>
+      <div className="report-card card"><p>Thói quen hàng đầu</p><div className="ranking">{habits.slice(0,3).map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>0 ngày</strong></div>)}</div></div>
       <div className="report-card card"><p>Thói quen cần cải thiện</p><div className="improve">{habits.slice(-3).map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></div>)}</div></div>
     </div>
   </>;
@@ -286,8 +290,8 @@ function StatisticsView({ habits }) {
   return <>
     <PageTitle title="Thống kê" text="Phân tích chuyên sâu về nhịp độ và khung giờ hiệu quả." action={<div className="selects"><select defaultValue="all"><option value="all">Tất cả thói quen</option></select><select><option>30 ngày qua</option><option>7 ngày qua</option></select></div>}/>
     <div className="stats-grid">
-      <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{[84,76,81,79,82,91,96].map((v,i)=><div key={i}><i style={{height:`${v}%`}}/><span>{week[i]}</span></div>)}</div></div>
-      <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.2+(i%7)*.12}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
+      <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{week.map((label,i)=><div key={label}><i style={{height:"0%"}}/><span>{week[i]}</span></div>)}</div></div>
+      <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.08}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
     </div>
   </>;
 }
@@ -424,7 +428,7 @@ export default function Home() {
       } catch { return fallback; }
     };
     const existingHabits=read("habitflow-habits",seedHabits);
-    const normalizedHabits=existingHabits;
+    const normalizedHabits=resetHabitRates(existingHabits);
     if(localStorage.getItem("habitflow-sample-version")!==SAMPLE_VERSION){
       const ids=new Set(normalizedHabits.map(h=>h.id));
       setHabits([...normalizedHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
@@ -458,7 +462,7 @@ export default function Home() {
 
         if(data){
           appsScriptSnapshotRef.current=JSON.stringify(data);
-          if(Array.isArray(data.habits))setHabits(data.habits);
+          if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
           if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
           if(Array.isArray(data.goals))setGoals(data.goals);
           if(Array.isArray(data.notes))setNotes(data.notes);
@@ -523,7 +527,7 @@ export default function Home() {
         if(snapshot===appsScriptSnapshotRef.current)return;
 
         appsScriptSnapshotRef.current=snapshot;
-        if(Array.isArray(data.habits))setHabits(data.habits);
+        if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
         if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
         if(Array.isArray(data.goals))setGoals(data.goals);
         if(Array.isArray(data.notes))setNotes(data.notes);
@@ -581,7 +585,7 @@ export default function Home() {
       }
       appsScriptSnapshotRef.current=JSON.stringify(data);
       appsScriptDirtyRef.current=false;
-      if(Array.isArray(data.habits))setHabits(data.habits);
+      if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
       if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
       if(Array.isArray(data.goals))setGoals(data.goals);
       if(Array.isArray(data.notes))setNotes(data.notes);
