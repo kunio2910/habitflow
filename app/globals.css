@@ -124,10 +124,10 @@ body.dark-mode .icon-picks button.selected{background:#2a2347}
 
 /* Daily progress markers in home calendar */
 .compact-days button{position:relative;display:flex;align-items:center;justify-content:center;gap:3px}
-.compact-day-number{font-size:10px;font-weight:600}
-.day-percent{font-size:6px;color:var(--muted);line-height:1}
+.compact-day-number{font-size:14px;font-weight:800;line-height:1}
+.day-percent{font-size:5px;color:var(--muted);line-height:1}
 .day-star{width:10px;height:10px;color:#f3b817;filter:drop-shadow(0 1px 2px #d59b2638)}
 .compact-days button.current .day-percent{color:#e9e5ff}
 .compact-days button.current .day-star{color:#ffd65a}
 @media(max-width:800px){.icon-picks{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:480px){.icon-picks{grid-template-columns:repeat(2,1fr)}.day-percent{font-size:5px}.day-star{width:9px;height:9px}}
+@media(max-width:480px){.icon-picks{grid-template-columns:repeat(2,1fr)}.compact-day-number{font-size:12px}.day-percent{font-size:5px}.day-star{width:9px;height:9px}}
