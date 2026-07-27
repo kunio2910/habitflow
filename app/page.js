@@ -128,11 +128,12 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
 }
 
 function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
-  const completedHabits=habits.filter(h=>h.done);
+  const visibleHabits=habits.filter(h=>!h.hidden);
+  const completedHabits=visibleHabits.filter(h=>h.done);
   const done = completedHabits.length;
-  const percent = Math.round(done / habits.length * 100) || 0;
+  const percent = Math.round(done / visibleHabits.length * 100) || 0;
   const [filter, setFilter] = useState("Tất cả");
-  const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
+  const shown = filter === "Tất cả" ? visibleHabits : visibleHabits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="home-stack">
@@ -161,12 +162,16 @@ function CalendarMini({ setView, onSelectDate }) {
   const firstWeekday=(new Date(year,month,1).getDay()+6)%7;
   const dates=[...Array(daysInMonth)].map((_,index)=>new Date(year,month,index+1));
   return <div className="calendar compact card">
-    <SectionHead title="Lịch"><button className="link" onClick={()=>setView("Lịch")}>Xem đầy đủ</button></SectionHead>
-    <div className="compact-month">{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</div>
-    <div className="compact-weekdays">{week.map(label=><b key={label}>{label}</b>)}</div>
-    <div className="compact-days">
-      {[...Array(firstWeekday)].map((_,index)=><i aria-hidden="true" key={`empty-${index}`}/>)}
-      {dates.map(date=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><span>{date.getDate()}</span></button>)}
+    <div className="compact-calendar-head">
+      <div className="compact-calendar-title"><span><CalendarDays/></span><div><small>LỊCH THÁNG</small><strong>{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</strong></div></div>
+      <button className="compact-calendar-link" onClick={()=>setView("Lịch")}>Xem đầy đủ <ChevronRight/></button>
+    </div>
+    <div className="compact-calendar-body">
+      <div className="compact-weekdays">{week.map(label=><b key={label}>{label}</b>)}</div>
+      <div className="compact-days">
+        {[...Array(firstWeekday)].map((_,index)=><i aria-hidden="true" key={`empty-${index}`}/>)}
+        {dates.map(date=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><span>{date.getDate()}</span></button>)}
+      </div>
     </div>
   </div>;
 }
@@ -223,7 +228,7 @@ function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" 
     <PageTitle title="Thói quen của tôi" text={query ? `Tìm thấy ${filtered.length} kết quả cho “${query}”.` : "Quản lý và theo dõi tất cả thói quen của bạn."} action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <div className="page-tabs">{labels.map(x=><button className={tab===x?"active":""} key={x} onClick={()=>setTab(x)}>{x} <span>{x==="Tất cả"?`(${habits.length})`:""}</span></button>)}</div>
     <div className="habit-cards">{filtered.map(h=><div className="habit-card card" key={h.id}>
-      <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
+      <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}{h.hidden&&<em className="hidden-badge">Đang ẩn</em>}</strong><span>Mỗi ngày · {h.times?.length?h.times.join(", "):`Buổi ${h.period.toLowerCase()}`}</span></div>
       <div className="habit-meta"><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
       <div className="habit-actions"><button aria-label={`Tùy chọn ${h.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===h.id?null:h.id)}><MoreVertical/></button>
         {menuId===h.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onProgress(h);setMenuId(null)}}><TrendingUp/> Cập nhật tiến độ</button><button className="edit-action" onClick={()=>{onEdit(h);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
@@ -234,17 +239,24 @@ function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" 
 }
 
 function AddHabitView({ onBack, onSave, initialHabit }) {
+  const initialTimes=initialHabit?.times?.length
+    ? initialHabit.times
+    : initialHabit
+      ? [initialHabit.period==="Cả ngày"?"Buổi sáng":initialHabit.period.startsWith("Buổi")?initialHabit.period:`Buổi ${initialHabit.period.toLowerCase()}`]
+      : ["Buổi sáng"];
   const [form, setForm] = useState(initialHabit ? {
     name:initialHabit.name,
     note:initialHabit.note||"",
     category:initialHabit.category||"Sức khỏe",
     frequency:initialHabit.frequency||"Hàng ngày",
-    time:initialHabit.period==="Cả ngày"?"Buổi sáng":initialHabit.period.startsWith("Buổi")?initialHabit.period:`Buổi ${initialHabit.period.toLowerCase()}`,
+    times:initialTimes,
+    hidden:initialHabit.hidden??false,
     reminder:initialHabit.reminder??true,
     goal:initialHabit.goal||"Số lượng",
     amount:initialHabit.amount||"1"
-  } : { name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", time:"Buổi sáng", reminder:true, goal:"Số lượng", amount:"1" });
+  } : { name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", times:["Buổi sáng"], hidden:false, reminder:true, goal:"Số lượng", amount:"1" });
   const set = (key, value) => setForm({...form,[key]:value});
+  const toggleTime = time => set("times",form.times.includes(time)?(form.times.length===1?form.times:form.times.filter(item=>item!==time)):[...form.times,time]);
   const categories = [["Sức khỏe",HeartPulse],["Học tập",BookOpen],["Phát triển bản thân",UserRound],["Công việc",BriefcaseBusiness],["Khác",Grid2X2]];
   return <div className="form-page">
     <button className="back-btn" onClick={onBack}><ArrowLeft/> {initialHabit?"Chỉnh sửa thói quen":"Thêm thói quen"}</button>
@@ -255,10 +267,11 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
       <label>Mô tả (tùy chọn)<input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ghi chú thêm về thói quen này..."/></label>
       <fieldset><legend>Danh mục</legend><div className="category-picks">{categories.map(([name,I])=><button type="button" onClick={()=>set("category",name)} className={form.category===name?"selected":""} key={name}><I/><span>{name}</span></button>)}</div></fieldset>
       <fieldset><legend>Tần suất</legend><div className="choice-row">{["Hàng ngày","Hàng tuần","Tùy chọn"].map(x=><button type="button" onClick={()=>set("frequency",x)} className={form.frequency===x?"selected":""} key={x}><CalendarCheck/>{x}</button>)}</div></fieldset>
-      <fieldset><legend>Thời gian</legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>set("time",a)} className={form.time===a?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small></button>)}</div></fieldset>
+      <fieldset><legend>Thời gian <small className="legend-hint">Có thể chọn nhiều</small></legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>toggleTime(a)} className={form.times.includes(a)?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small>{form.times.includes(a)&&<Check className="pick-check"/>}</button>)}</div></fieldset>
+      <div className="visibility-setting"><div><strong>Hiển thị ở Tiến độ hôm nay</strong><span>{form.hidden?"Thói quen đang được ẩn và không tính vào % hoàn thành.":"Thói quen đang hiển thị và được tính vào % hoàn thành."}</span></div><button type="button" aria-pressed={!form.hidden} className={!form.hidden?"switch on":"switch"} onClick={()=>set("hidden",!form.hidden)}><i/></button></div>
       <div className="form-split"><label>Nhắc nhở<span className="switch-line"><input type="time" defaultValue="08:00"/><button type="button" className={form.reminder?"switch on":"switch"} onClick={()=>set("reminder",!form.reminder)}><i/></button></span></label><label>Ngày bắt đầu<input type="date" defaultValue={dateKey()}/></label></div>
       <fieldset><legend>Mục tiêu</legend><div className="goal-options">{["Không có mục tiêu","Số lượng","Thời gian"].map(x=><label key={x}><input type="radio" checked={form.goal===x} onChange={()=>set("goal",x)}/>{x}{x===form.goal&&x!=="Không có mục tiêu"&&<><input className="mini-input" value={form.amount} onChange={e=>set("amount",e.target.value)}/><span>{x==="Thời gian"?"phút":"lần"}</span></>}</label>)}</div></fieldset>
-      <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&onSave(form)}><Save/> {initialHabit?"Lưu thay đổi":"Lưu thói quen"}</button></div>
+      <div className="form-actions"><button className="secondary" onClick={onBack}>Hủy</button><button className="primary" onClick={()=>form.name.trim()&&form.times.length&&onSave(form)}><Save/> {initialHabit?"Lưu thay đổi":"Lưu thói quen"}</button></div>
     </div>
   </div>;
 }
@@ -627,13 +640,13 @@ export default function Home() {
   const saveHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
     const [icon,color] = categoryMap[form.category] || ["journal","slate"];
-    const rawPeriod=form.time.replace("Buổi ","");
-    const period=rawPeriod.charAt(0).toUpperCase()+rawPeriod.slice(1);
+    const times=form.times?.length?form.times:["Buổi sáng"];
+    const period=times.map(time=>time.replace("Buổi ","")).join(", ");
     if(editingHabit){
-      setHabits(habits.map(h=>h.id===editingHabit.id?{...h,...form,name:form.name.trim(),icon,color,period,category:form.category}:h));
+      setHabits(habits.map(h=>h.id===editingHabit.id?{...h,...form,times,name:form.name.trim(),icon,color,period,category:form.category}:h));
       notify("Đã cập nhật thói quen");
     } else {
-      setHabits([...habits,{id:Date.now(),...form,name:form.name.trim(),detail:"Chưa thực hiện",icon,color,progress:0,done:false,period,rate:0,category:form.category}]);
+      setHabits([...habits,{id:Date.now(),...form,times,name:form.name.trim(),detail:"Chưa thực hiện",icon,color,progress:0,done:false,period,rate:0,category:form.category}]);
       notify("Đã thêm thói quen mới");
     }
     setEditingHabit(null);

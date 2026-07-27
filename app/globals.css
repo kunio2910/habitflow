@@ -73,3 +73,40 @@ body.dark-mode .completed-icons .habit-icon{border-color:#181a24}
 .today-completed>span{color:var(--muted);font-size:9px;font-weight:600;white-space:nowrap}
 .today-completed .completed-icons{margin:0;max-width:none}
 @media(max-width:800px){.day-summary{grid-template-columns:1fr}.reset-achievements{font-size:0;padding:11px}.reset-achievements svg{margin:0}}
+
+/* Multi-time habit editor and visibility */
+.legend-hint{font-size:8px;font-weight:500;color:var(--muted);margin-left:7px}
+.time-picks button{position:relative}
+.time-picks .pick-check{position:absolute;right:7px;top:7px;width:13px;height:13px}
+.visibility-setting{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 16px;margin:17px 0;border:1px solid var(--border);border-radius:11px;background:#fafbfe}
+.visibility-setting>div{display:grid;gap:5px}
+.visibility-setting strong{font-size:10px}
+.visibility-setting span{font-size:8px;color:var(--muted);line-height:1.5}
+.visibility-setting .switch{flex:none}
+.hidden-badge{font-style:normal;font-size:7px;color:var(--muted);background:#eff0f4;border-radius:10px;padding:3px 6px;margin-left:7px}
+body.dark-mode .visibility-setting{background:#13151e}
+body.dark-mode .hidden-badge{background:#292c39}
+
+/* Home calendar */
+.calendar.compact{padding:0;overflow:hidden;min-height:0}
+.compact-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#fbfaff,#f5f2ff)}
+.compact-calendar-title{display:flex;align-items:center;gap:12px}
+.compact-calendar-title>span{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--purple);color:#fff;box-shadow:0 7px 18px #6741f52e}
+.compact-calendar-title svg{width:19px}
+.compact-calendar-title div{display:grid;gap:4px}
+.compact-calendar-title small{font-size:7px;letter-spacing:1.1px;color:var(--purple);font-weight:700}
+.compact-calendar-title strong{font-size:14px;text-transform:capitalize}
+.compact-calendar-link{border:1px solid #ded8fb;background:#fff;color:var(--purple);border-radius:9px;padding:8px 11px;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600}
+.compact-calendar-link svg{width:13px}
+.compact-calendar-body{padding:15px 22px 19px}
+.compact-weekdays{gap:7px;margin-bottom:7px}
+.compact-weekdays b{text-transform:uppercase}
+.compact-days{gap:7px}
+.compact-days>i{min-height:34px}
+.compact-days button{min-height:34px;height:34px;color:#55586a;border-radius:10px;transition:.18s}
+.compact-days button:hover{background:var(--purple-soft);color:var(--purple)}
+.compact-days button span{font-size:10px;font-weight:500}
+body.dark-mode .compact-calendar-head{background:linear-gradient(135deg,#1b1c28,#211d36)}
+body.dark-mode .compact-calendar-link{background:#181a24;border-color:#393250}
+body.dark-mode .compact-days button{color:#c4c6d1}
+@media(max-width:600px){.compact-calendar-head,.compact-calendar-body{padding-left:14px;padding-right:14px}.compact-days,.compact-weekdays{gap:3px}.compact-days button,.compact-days>i{min-height:31px;height:31px}}
