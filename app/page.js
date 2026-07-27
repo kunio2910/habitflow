@@ -139,7 +139,7 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, openProgress, openAdd, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, setView, onSelectDate }) {
   const visibleHabits=habits.filter(h=>!h.hidden);
   const completedHabits=visibleHabits.filter(h=>h.done);
   const done = completedHabits.length;
@@ -156,9 +156,9 @@ function Overview({ habits, completionHistory, openProgress, openAdd, setView, o
         </SectionHead>
         <div className="progress"><i style={{width:`${percent}%`}}/></div>
         {completedHabits.length>0&&<div className="today-completed"><span>Đã hoàn thành</span><div className="completed-icons">{completedHabits.map(h=><HabitIcon habit={h} key={h.id}/>)}</div></div>}
-        <div className="habit-list">{shown.map(h => <div className="habit" key={h.id}>
-          <HabitIcon habit={h}/><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
-          <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={()=>openProgress(h)}><Ring value={h.progress} size={44}/></button>
+        <div className="habit-list">{shown.map(h => <div className="habit interactive-habit" role="button" tabIndex={0} onClick={()=>openProgress(h)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProgress(h)}}} key={h.id}>
+          <button className="habit-edit-trigger" aria-label={`Chỉnh sửa thói quen ${h.name}`} onClick={e=>{e.stopPropagation();onEdit(h)}}><HabitIcon habit={h}/></button><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
+          <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={e=>{e.stopPropagation();openProgress(h)}}><Ring value={h.progress} size={44}/></button>
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
@@ -708,7 +708,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
