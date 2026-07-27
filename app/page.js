@@ -1,36 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loadCloudState, saveCloudState } from "../lib/habitflowSync.js";
 import { loadDataFromGoogle, saveDataToGoogle } from "./lib/googleSheets";
 import {
   LayoutDashboard, ListChecks, CalendarDays, BarChart3, Settings, Bell,
   Droplets, Dumbbell, BookOpen, Brain, Languages, NotebookPen, CandyOff,
-  Moon, Flame, Clock3, TrendingUp, Plus, Check, ChevronLeft, ChevronRight,
+  Moon, TrendingUp, Plus, Check, ChevronLeft, ChevronRight,
   Trophy, Target, X, Menu, Search, Sparkles, SlidersHorizontal, Goal,
-  Medal, StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
-  UserRound, Grid2X2, CalendarCheck, Save, LockKeyhole, Award, Timer,
+  StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
+  UserRound, Grid2X2, CalendarCheck, Save,
   CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
-  Database, Palette, Volume2, Trash2, Cloud, CloudOff, RefreshCw,
+  Database, Volume2, Trash2,
   CloudUpload, CloudDownload
 } from "lucide-react";
 
-const IS_STATIC_PAGES = process.env.NEXT_PUBLIC_STATIC_PAGES === "true";
-const SYNC_APP_URL =
-  process.env.NEXT_PUBLIC_SYNC_APP_URL ||
-  "https://habitflow-quan-ly-thoi-quen.alibaba0903.chatgpt.site";
-
 const seedHabits = [
-  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", streak: 0, rate: 90, category: "Sức khỏe" },
-  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", streak: 0, rate: 86, category: "Sức khỏe" },
-  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", streak: 0, rate: 93, category: "Học tập" },
-  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", streak: 0, rate: 71, category: "Phát triển bản thân" },
-  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", streak: 0, rate: 57, category: "Học tập" },
-  { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", streak: 0, rate: 0, category: "Phát triển bản thân" },
-  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", streak: 0, rate: 28, category: "Sức khỏe" },
-  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", streak: 0, rate: 43, category: "Sức khỏe" },
-  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", streak: 0, rate: 82, category: "Sức khỏe" },
-  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", streak: 0, rate: 74, category: "Học tập" }
+  { id: 1, name: "Uống 2 lít nước", detail: "2 / 2 lít", icon: "water", color: "blue", progress: 100, done: true, period: "Sáng", rate: 90, category: "Sức khỏe" },
+  { id: 2, name: "Tập thể dục 30 phút", detail: "30 / 30 phút", icon: "sport", color: "green", progress: 100, done: true, period: "Chiều", rate: 86, category: "Sức khỏe" },
+  { id: 3, name: "Đọc sách 20 trang", detail: "20 / 20 trang", icon: "book", color: "orange", progress: 100, done: true, period: "Tối", rate: 93, category: "Học tập" },
+  { id: 4, name: "Thiền 10 phút", detail: "10 / 10 phút", icon: "brain", color: "purple", progress: 100, done: true, period: "Sáng", rate: 71, category: "Phát triển bản thân" },
+  { id: 5, name: "Học ngoại ngữ 30 phút", detail: "15 / 30 phút", icon: "language", color: "yellow", progress: 50, done: false, period: "Chiều", rate: 57, category: "Học tập" },
+  { id: 6, name: "Viết nhật ký", detail: "Chưa thực hiện", icon: "journal", color: "slate", progress: 0, done: false, period: "Tối", rate: 0, category: "Phát triển bản thân" },
+  { id: 7, name: "Không ăn đồ ngọt", detail: "Chưa thực hiện", icon: "candy", color: "pink", progress: 0, done: false, period: "Cả ngày", rate: 28, category: "Sức khỏe" },
+  { id: 8, name: "Đi ngủ trước 23:00", detail: "Chưa thực hiện", icon: "moon", color: "indigo", progress: 0, done: false, period: "Tối", rate: 43, category: "Sức khỏe" },
+  { id: 9, name: "Đi bộ 8.000 bước", detail: "6.420 / 8.000 bước", icon: "sport", color: "green", progress: 80, done: false, period: "Chiều", rate: 82, category: "Sức khỏe" },
+  { id: 10, name: "Ôn tập từ vựng", detail: "15 / 20 từ", icon: "language", color: "yellow", progress: 75, done: false, period: "Sáng", rate: 74, category: "Học tập" }
 ];
 
 const goalsSeed = [
@@ -49,7 +43,6 @@ const notesSeed = [
 
 const SAMPLE_VERSION = "habitflow-sample-v2";
 const RESET_VERSION = "habitflow-reset-progress-v1";
-const DEFAULT_ACHIEVEMENTS = [];
 const CURRENT_DATE_KEY = "2026-07-24";
 
 function dateKey(day) {
@@ -59,10 +52,6 @@ function dateKey(day) {
 function completedHabitsForDay(habits, completionHistory, day) {
   const ids = new Set(completionHistory[dateKey(day)] || []);
   return habits.filter(h => ids.has(h.id));
-}
-
-function longestStreak(habits) {
-  return Math.max(0,...habits.map(h=>Number(h.streak)||0));
 }
 
 function totalCompletions(completionHistory) {
@@ -77,7 +66,7 @@ const IconMap = {
 const nav = [
   ["Tổng quan", LayoutDashboard], ["Thói quen", ListChecks], ["Hôm nay", Sparkles],
   ["Lịch", CalendarDays], ["Báo cáo", BarChart3], ["Thống kê", TrendingUp],
-  ["Mục tiêu", Goal], ["Thành tựu", Medal], ["Ghi chú", StickyNote], ["Cài đặt", Settings]
+  ["Mục tiêu", Goal], ["Ghi chú", StickyNote], ["Cài đặt", Settings]
 ];
 
 const chartValues = [52, 69, 66, 83, 95, 76, 84];
@@ -119,19 +108,16 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, unlockedAchievements, toggle, openProgress, openAdd, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, toggle, openProgress, openAdd, setView, onSelectDate }) {
   const done = habits.filter(h => h.done).length;
   const percent = Math.round(done / habits.length * 100) || 0;
-  const currentStreak = longestStreak(habits);
   const [filter, setFilter] = useState("Tất cả");
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
     <PageTitle eyebrow="THỨ SÁU, 24 THÁNG 7" title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="stats">
       <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
-      <StatCard label="Chuỗi ngày hiện tại" value={currentStreak} sub="ngày liên tiếp" icon={Flame} tone="green"/>
       <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
-      <StatCard label="Thời gian tập trung" value="12.5" sub="giờ" icon={Clock3} tone="orange"/>
     </section>
     <section className="dashboard-grid">
       <div className="today card">
@@ -147,7 +133,6 @@ function Overview({ habits, completionHistory, unlockedAchievements, toggle, ope
       </div>
       <div className="right-col">
         <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
-        <AchievementsMini setView={setView} unlockedIds={unlockedAchievements}/>
       </div>
     </section>
     <ReportSummary habits={habits}/>
@@ -171,24 +156,12 @@ function DayDetailView({ habits, completionHistory, day, onBack }) {
     <section className="day-summary">
       <StatCard label="Đã hoàn thành" value={`${completed.length} / ${habits.length}`} sub="thói quen" ring={rate}/>
       <StatCard label="Tỷ lệ hoàn thành" value={`${rate}%`} sub="trong ngày" icon={TrendingUp} tone="blue"/>
-      <StatCard label="Chuỗi duy trì" value={`${completed.length?longestStreak(completed):0} ngày`} sub="liên tiếp" icon={Flame} tone="green"/>
     </section>
     <div className="day-detail card">
       <SectionHead title="Thói quen đã hoàn thành" label="NHẬT KÝ TRONG NGÀY"><span className="complete-count"><Check/> {completed.length} mục</span></SectionHead>
       {completed.length?<div className="completed-list">{completed.map(h=><div key={h.id}><HabitIcon habit={h}/><div><strong>{h.name}</strong><span>{h.category} · {h.period}</span></div><CircleCheckBig/></div>)}</div>:<div className="empty-state"><CalendarDays/><h3>Chưa có thói quen hoàn thành</h3><p>Ngày này chưa ghi nhận hoạt động nào.</p></div>}
     </div>
   </>;
-}
-
-function AchievementsMini({ setView, unlockedIds }) {
-  const rows = [
-    [3,"7 ngày liên tiếp","Hoàn thành thói quen 7 ngày liên tiếp","green",Flame],
-    [6,"Buổi sáng năng lượng","Hoàn thành tất cả thói quen buổi sáng","orange",Sparkles],
-    [5,"Không bỏ cuộc","Không bỏ lỡ ngày nào trong tuần","blue",Trophy]
-  ].filter(([id])=>unlockedIds.includes(id));
-  return <div className="achievements card"><SectionHead title="Thành tích"><button className="link" onClick={()=>setView("Thành tựu")}>Xem tất cả</button></SectionHead>
-    {rows.length?rows.map(([,a,b,c,I])=><div className="achievement" key={a}><span className={c}><I/></span><div><strong>{a}</strong><p>{b}</p></div></div>):<div className="mini-empty"><Medal/><strong>Chưa có thành tích</strong><p>Hoàn thành thói quen để mở khóa huy hiệu đầu tiên.</p></div>}
-  </div>;
 }
 
 function ReportSummary({ habits }) {
@@ -198,7 +171,6 @@ function ReportSummary({ habits }) {
     <div className="report-grid">
       <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">78% <span>↗ 12% so với {report.toLowerCase()} trước</span></div><MiniLine/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
       <HabitBars habits={habits}/>
-      <StreakChart habits={habits}/>
       <CategoryDonut/>
     </div>
   </section>;
@@ -206,12 +178,6 @@ function ReportSummary({ habits }) {
 
 function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
   return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${Math.max(h.rate, 15)}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
-}
-
-function StreakChart({ habits = [] }) {
-  const streak=longestStreak(habits);
-  const values=habits.length?habits.slice(0,12).map(h=>Number(h.streak)||0):[0];
-  return <div className="report-card streak"><p>Chuỗi ngày dài nhất</p><div className="metric">{streak} ngày <span>{streak?`${streak} ngày đang duy trì`:"Chưa có chuỗi ngày"}</span></div><div className="columns">{values.map((v,i)=><i key={i} style={{height:Math.max(2,v*5)}}><small>{v}</small></i>)}</div></div>;
 }
 
 function CategoryDonut() {
@@ -230,7 +196,7 @@ function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" 
     <div className="page-tabs">{labels.map(x=><button className={tab===x?"active":""} key={x} onClick={()=>setTab(x)}>{x} <span>{x==="Tất cả"?`(${habits.length})`:""}</span></button>)}</div>
     <div className="habit-cards">{filtered.map(h=><div className="habit-card card" key={h.id}>
       <HabitIcon habit={h}/><div className="habit-main"><strong>{h.name}</strong><span>Mỗi ngày · Buổi {h.period.toLowerCase()}</span></div>
-      <div className="habit-meta"><span>Chuỗi hiện tại<strong>{h.streak} ngày</strong></span><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
+      <div className="habit-meta"><span>Tỷ lệ hoàn thành<strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></span></div>
       <div className="habit-actions"><button aria-label={`Tùy chọn ${h.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===h.id?null:h.id)}><MoreVertical/></button>
         {menuId===h.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onProgress(h);setMenuId(null)}}><TrendingUp/> Cập nhật tiến độ</button><button className="edit-action" onClick={()=>{onEdit(h);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(h);setMenuId(null)}}><Trash2/> Xóa thói quen</button></div>}
       </div>
@@ -280,20 +246,17 @@ function CalendarView({ habits, completionHistory }) {
       <div className="calendar-head"><span></span>{week.map((d,i)=><b className={i===4?"today-col":""} key={d}>{d}<small>{dates[i]}/7</small></b>)}</div>
       {habits.map(h=><div className="calendar-row" key={h.id}><div><HabitIcon habit={h}/><span>{h.name}</span></div>{dates.map((day,c)=><span className={c===4?"today-col":""} key={day}>{completionHistory[dateKey(day)]?.includes(h.id)?<CircleCheckBig/>:<i/>}</span>)}</div>)}
     </div>
-    <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành",`${completionRate}%`,"Dữ liệu thực tế"],["Tổng hoàn thành",`${completedCount} / ${habits.length*dates.length}`,""],["Chuỗi ngày dài nhất",`${longestStreak(habits)} ngày`,""],["Thời gian tập trung","0 giờ",""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
+    <div className="week-summary card"><h3>Tổng quan tuần</h3><div>{[["Tỷ lệ hoàn thành",`${completionRate}%`,"Dữ liệu thực tế"],["Tổng hoàn thành",`${completedCount} / ${habits.length*dates.length}`,""]].map(([a,b,c])=><section key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></section>)}</div></div>
   </>;
 }
 
 function ReportsView({ habits }) {
   const [period,setPeriod]=useState("Tuần");
-  const streak=longestStreak(habits);
   return <>
     <PageTitle title="Báo cáo" text="Bức tranh tổng quan về hành trình xây dựng thói quen." action={<div className="tabs">{["Tuần","Tháng","Năm","Tùy chỉnh"].map(x=><button onClick={()=>setPeriod(x)} className={period===x?"selected":""} key={x}>{x}</button>)}</div>}/>
     <section className="stats report-stats">
       <StatCard label="Tỷ lệ hoàn thành trung bình" value="85%" sub="" delta="+12%"/>
       <StatCard label="Tổng thói quen hoàn thành" value="156" sub="lần"/>
-      <StatCard label="Chuỗi ngày dài nhất" value={`${streak} ngày`} sub=""/>
-      <StatCard label="Tổng thời gian tập" value="48.5 giờ" sub=""/>
     </section>
     <div className="report-grid standalone">
       <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={[48,65,62,80,91,72,79]}/><div className="chart-labels">{["18/5","19/5","20/5","21/5","22/5","23/5","24/5"].map(x=><span key={x}>{x}</span>)}</div></div>
@@ -308,10 +271,8 @@ function StatisticsView({ habits }) {
   return <>
     <PageTitle title="Thống kê" text="Phân tích chuyên sâu về nhịp độ và khung giờ hiệu quả." action={<div className="selects"><select defaultValue="all"><option value="all">Tất cả thói quen</option></select><select><option>30 ngày qua</option><option>7 ngày qua</option></select></div>}/>
     <div className="stats-grid">
-      <StreakChart habits={habits}/>
       <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{[84,76,81,79,82,91,96].map((v,i)=><div key={i}><i style={{height:`${v}%`}}/><span>{week[i]}</span></div>)}</div></div>
       <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.2+(i%7)*.12}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
-      <div className="report-card card focus-chart"><p>Thời gian tập trung</p><MiniLine values={[30,38,52,44,63,54,72]} color="#456df5"/><strong>21.0 <small>giờ</small></strong><span>Tổng thời gian</span></div>
     </div>
   </>;
 }
@@ -326,36 +287,6 @@ function GoalsView({ goals, openGoal, onEdit, onDelete }) {
     {tab==="Đang thực hiện"?<div className="goal-list">{goals.map(g=><div className="goal-card card" key={g.id}><HabitIcon icon={g.icon} color={g.color}/><div><div className="goal-title"><strong>{g.name}</strong><div className="habit-actions"><button aria-label={`Tùy chọn mục tiêu ${g.name}`} className="ghost-icon" onClick={()=>setMenuId(menuId===g.id?null:g.id)}><MoreVertical/></button>{menuId===g.id&&<div className="action-popover"><button className="edit-action" onClick={()=>{onEdit(g);setMenuId(null)}}><PencilLine/> Chỉnh sửa</button><button onClick={()=>{setPendingDelete(g);setMenuId(null)}}><Trash2/> Xóa mục tiêu</button></div>}</div></div><span>Tiến độ <b>{g.value}</b></span><div className="goal-progress"><i style={{width:`${g.progress}%`}}/></div><footer><span>Hạn: {g.due}</span><b>{g.progress}%</b></footer></div></div>)}</div>:<div className="empty-state card"><Trophy/><h3>3 mục tiêu đã hoàn thành</h3><p>Bạn đang làm rất tốt. Hãy tiếp tục chinh phục mục tiêu tiếp theo!</p></div>}
     <div className="suggestions"><h3>Gợi ý mục tiêu cho bạn</h3>{["Thiền 30 ngày","Học 1000 từ vựng","Chạy 100km","Giảm 5kg","Ngủ trước 22:00 trong 30 ngày"].map(x=><button key={x}>{x}</button>)}</div>
     {pendingDelete&&<div className="modal-backdrop" onMouseDown={()=>setPendingDelete(null)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><Trash2/></span><h2>Xóa mục tiêu?</h2><p>“{pendingDelete.name}” và tiến độ hiện tại sẽ bị xóa.</p><div><button className="secondary" onClick={()=>setPendingDelete(null)}>Hủy</button><button className="delete-button" onClick={()=>{onDelete(pendingDelete.id);setPendingDelete(null)}}><Trash2/> Xóa</button></div></div></div>}
-  </>;
-}
-
-const achievementCatalog = [
-  {id:1,name:"Khởi đầu tốt",text:"Hoàn thành thói quen đầu tiên",color:"blue",Icon:Medal},
-  {id:2,name:"3 ngày liên tiếp",text:"Duy trì thói quen 3 ngày",color:"green",Icon:Award},
-  {id:3,name:"7 ngày liên tiếp",text:"Duy trì thói quen 7 ngày",color:"green",Icon:Award},
-  {id:4,name:"14 ngày liên tiếp",text:"Duy trì thói quen 14 ngày",color:"blue",Icon:Medal},
-  {id:5,name:"Không bỏ cuộc",text:"Hoàn thành 7 tuần không bỏ ngày",color:"yellow",Icon:Trophy},
-  {id:6,name:"Buổi sáng năng lượng",text:"Hoàn thành tất cả thói quen buổi sáng",color:"orange",Icon:Sun},
-  {id:7,name:"Đọc sách mỗi ngày",text:"Đọc sách 7 ngày liên tiếp",color:"purple",Icon:BookOpen},
-  {id:8,name:"Siêng năng",text:"Hoàn thành 100 thói quen",color:"slate",Icon:LockKeyhole},
-  {id:9,name:"30 ngày liên tiếp",text:"Duy trì thói quen 30 ngày",color:"slate",Icon:LockKeyhole},
-  {id:10,name:"Bậc thầy kiên trì",text:"Hoàn thành 365 thói quen",color:"slate",Icon:LockKeyhole},
-  {id:11,name:"Bậc thầy kỷ luật",text:"Hoàn thành 1000 thói quen",color:"slate",Icon:LockKeyhole},
-  {id:12,name:"Huyền thoại",text:"Duy trì thói quen trong một năm",color:"slate",Icon:LockKeyhole}
-];
-
-function AchievementsView({ unlockedIds, onReset }) {
-  const [tab,setTab]=useState("Tất cả");
-  const [confirmReset,setConfirmReset]=useState(false);
-  const achieved=achievementCatalog.filter(x=>unlockedIds.includes(x.id));
-  const locked=achievementCatalog.filter(x=>!unlockedIds.includes(x.id));
-  const renderCards=items=><div className="badge-grid">{items.map(({id,name,text,color,Icon})=><div className="badge-card card" key={id}><div className={`badge ${unlockedIds.includes(id)?color:"slate"}`}>{unlockedIds.includes(id)?<Icon/>:<LockKeyhole/>}</div><strong>{name}</strong><p>{unlockedIds.includes(id)?text:"Hoàn thành thử thách để mở khóa"}</p></div>)}</div>;
-  return <>
-    <PageTitle title="Thành tựu của tôi" text="Mỗi huy hiệu là một dấu mốc đáng tự hào." action={<button className="secondary danger reset-achievements" onClick={()=>setConfirmReset(true)}><RotateCcw/> Đặt lại thành tựu</button>}/>
-    <div className="page-tabs">{["Tất cả","Đã đạt được","Chưa đạt được"].map(x=><button onClick={()=>setTab(x)} className={tab===x?"active":""} key={x}>{x}</button>)}</div>
-    {tab!=="Chưa đạt được"&&<><h3 className="subheading">Đã đạt được ({achieved.length})</h3>{achieved.length?renderCards(achieved):<div className="empty-state card"><Medal/><h3>Chưa có thành tựu</h3><p>Hoàn thành thói quen để mở khóa huy hiệu đầu tiên.</p></div>}</>}
-    {tab!=="Đã đạt được"&&<><h3 className="subheading">Chưa đạt được ({locked.length})</h3><div className="locked">{renderCards(locked)}</div></>}
-    {confirmReset&&<div className="modal-backdrop" onMouseDown={()=>setConfirmReset(false)}><div className="confirm-modal card" onMouseDown={e=>e.stopPropagation()}><span className="danger-icon"><RotateCcw/></span><h2>Đặt lại thành tựu?</h2><p>Tất cả huy hiệu đã mở khóa sẽ trở về trạng thái chưa đạt được. Thói quen của bạn không bị xóa.</p><div><button className="secondary" onClick={()=>setConfirmReset(false)}>Hủy</button><button className="delete-button" onClick={()=>{onReset();setConfirmReset(false)}}><RotateCcw/> Đặt lại</button></div></div></div>}
   </>;
 }
 
@@ -387,7 +318,7 @@ function NotesView({ notes, setNotes, notify }) {
   </>;
 }
 
-function SettingsView({ resetData, notify, theme, toggleTheme, sync, manualSync }) {
+function SettingsView({ resetData, notify, theme, toggleTheme, manualSync }) {
   const [reminders,setReminders]=useState(true);
   const [sounds,setSounds]=useState(false);
   const appsScriptStatusText={
@@ -398,30 +329,9 @@ function SettingsView({ resetData, notify, theme, toggleTheme, sync, manualSync 
     error:"Tự động lưu thất bại"
   }[manualSync.status]||"Tự động lưu đang bật";
   const appsScriptBusy=["waiting","saving","loading"].includes(manualSync.status);
-  const statusText={
-    signed_out:sync.staticMode?"Mở bản đồng bộ để đăng nhập":"Đăng nhập để bật đồng bộ",
-    connecting:"Đang kết nối...",
-    saving:"Đang lưu...",
-    synced:"Đã đồng bộ",
-    forbidden:"Tài khoản chưa được cấp quyền",
-    error:"Đồng bộ gặp lỗi"
-  }[sync.status]||"Đang kiểm tra kết nối";
   return <>
     <PageTitle title="Cài đặt" text="Tùy chỉnh trải nghiệm HabitFlow của bạn."/>
     <div className="settings-grid">
-      <section className="settings-card card sync-card">
-        <div className={`settings-icon ${sync.status==="synced"?"green":"purple"}`}>{sync.user?<Cloud/>:<CloudOff/>}</div>
-        <div className="sync-copy">
-          <h3>Đồng bộ tự động</h3>
-          <p>{sync.user?`Đang đồng bộ Google Sheets với tài khoản ${sync.user.email}.`:"Đăng nhập một lần trên mỗi thiết bị; HabitFlow sẽ tự tải và tự lưu dữ liệu."}</p>
-          <div className={`sync-status ${sync.status}`}><i/>{statusText}{sync.lastSyncedAt&&<span> · {sync.lastSyncedAt}</span>}</div>
-          {!sync.user&&sync.status!=="connecting"&&<a className="primary sync-login" href={sync.signInUrl}>{sync.staticMode?"Mở bản đồng bộ":"Đăng nhập để đồng bộ"}</a>}
-        </div>
-        <div className="sync-actions">
-          {sync.user&&<button className="secondary" onClick={sync.syncNow} disabled={sync.status==="connecting"||sync.status==="saving"}><RefreshCw/> Đồng bộ ngay</button>}
-          {sync.user&&<a className="secondary danger sync-signout" href={sync.signOutUrl}><CloudOff/> Đăng xuất</a>}
-        </div>
-      </section>
       <section className="settings-card card"><div className="settings-icon purple"><CloudUpload/></div><div><h3>Tự động lưu bằng Apps Script</h3><p>Mọi chỉnh sửa được lưu dạng JSON sau 1,5 giây. {appsScriptStatusText}</p></div><button className="secondary" disabled={appsScriptBusy} onClick={manualSync.backup}><CloudUpload/> {manualSync.status==="saving"?"Đang lưu...":"Lưu ngay"}</button></section>
       <section className="settings-card card"><div className="settings-icon blue"><CloudDownload/></div><div><h3>Khôi phục bằng Apps Script</h3><p>Tải bản JSON gần nhất từ trang tính Storage.</p></div><button className="secondary" disabled={appsScriptBusy} onClick={manualSync.restore}><CloudDownload/> {manualSync.status==="loading"?"Đang tải...":"Khôi phục"}</button></section>
       <section className="settings-card card"><div className="settings-icon purple"><Bell/></div><div><h3>Nhắc nhở thói quen</h3><p>Nhận thông báo theo lịch bạn đã thiết lập.</p></div><button className={reminders?"switch on":"switch"} onClick={()=>{setReminders(!reminders);notify(`Đã ${reminders?"tắt":"bật"} nhắc nhở`)}}><i/></button></section>
@@ -469,7 +379,6 @@ export default function Home() {
   const [completionHistory,setCompletionHistory]=useState({});
   const [goals, setGoals] = useState(goalsSeed);
   const [notes, setNotes] = useState(notesSeed);
-  const [unlockedAchievements,setUnlockedAchievements]=useState(DEFAULT_ACHIEVEMENTS);
   const [theme,setTheme]=useState("light");
   const [selectedDay,setSelectedDay]=useState(24);
   const [view, setView] = useState("Tổng quan");
@@ -481,10 +390,6 @@ export default function Home() {
   const [query,setQuery]=useState("");
   const [toast,setToast]=useState("");
   const [hydrated,setHydrated]=useState(false);
-  const [syncUser,setSyncUser]=useState(null);
-  const [syncStatus,setSyncStatus]=useState("connecting");
-  const [syncReady,setSyncReady]=useState(false);
-  const [lastSyncedAt,setLastSyncedAt]=useState("");
   const [manualSyncStatus,setManualSyncStatus]=useState("");
   const [appsScriptReady,setAppsScriptReady]=useState(false);
   const appsScriptSnapshotRef=useRef(null);
@@ -504,8 +409,7 @@ export default function Home() {
       } catch { return fallback; }
     };
     const existingHabits=read("habitflow-habits",seedHabits);
-    const needsReset=localStorage.getItem("habitflow-reset-version")!==RESET_VERSION;
-    const normalizedHabits=needsReset?existingHabits.map(h=>({...h,streak:0})):existingHabits;
+    const normalizedHabits=existingHabits;
     if(localStorage.getItem("habitflow-sample-version")!==SAMPLE_VERSION){
       const ids=new Set(normalizedHabits.map(h=>h.id));
       setHabits([...normalizedHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
@@ -515,103 +419,18 @@ export default function Home() {
     setCompletionHistory(storedHistory||{[CURRENT_DATE_KEY]:normalizedHabits.filter(h=>h.done).map(h=>h.id)});
     setGoals(read("habitflow-goals",goalsSeed));
     setNotes(read("habitflow-notes",notesSeed));
-    setUnlockedAchievements(needsReset?[]:read("habitflow-achievements",DEFAULT_ACHIEVEMENTS));
-    if(needsReset)localStorage.setItem("habitflow-reset-version",RESET_VERSION);
+    localStorage.removeItem("habitflow-achievements");
     setTheme(localStorage.getItem("habitflow-theme")==="dark"?"dark":"light");
-    localStorage.removeItem("habitflow-sync-token");
     setHydrated(true);
   }, []);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-completion-history", JSON.stringify(completionHistory)); }, [completionHistory,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-goals", JSON.stringify(goals)); }, [goals,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-notes", JSON.stringify(notes)); }, [notes,hydrated]);
-  useEffect(() => { if(hydrated)localStorage.setItem("habitflow-achievements", JSON.stringify(unlockedAchievements)); }, [unlockedAchievements,hydrated]);
   useEffect(() => {
     document.body.classList.toggle("dark-mode",theme==="dark");
     if(hydrated)localStorage.setItem("habitflow-theme",theme);
   },[theme,hydrated]);
-  useEffect(() => {
-    if(!hydrated)return;
-
-    if(IS_STATIC_PAGES){
-      setSyncStatus("signed_out");
-      setSyncReady(false);
-      setLastSyncedAt("");
-      return;
-    }
-
-    let cancelled=false;
-    setSyncStatus("connecting");
-    setSyncReady(false);
-
-    const connect=async()=>{
-      try{
-        const result=await loadCloudState();
-        if(cancelled)return;
-        const cloud=result.state||{};
-        const hasCloudData=["habits","completionHistory","goals","notes","unlockedAchievements","theme"].some(key=>cloud[key]!==undefined&&cloud[key]!==null);
-        let updatedAt=result.updatedAt;
-        setSyncUser(result.user||null);
-
-        if(hasCloudData){
-          if(Array.isArray(cloud.habits))setHabits(cloud.habits);
-          if(cloud.completionHistory&&typeof cloud.completionHistory==="object"&&!Array.isArray(cloud.completionHistory))setCompletionHistory(cloud.completionHistory);
-          if(Array.isArray(cloud.goals))setGoals(cloud.goals);
-          if(Array.isArray(cloud.notes))setNotes(cloud.notes);
-          if(Array.isArray(cloud.unlockedAchievements))setUnlockedAchievements(cloud.unlockedAchievements);
-          if(cloud.theme==="light"||cloud.theme==="dark")setTheme(cloud.theme);
-        }else{
-          const saved=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
-          updatedAt=saved.updatedAt;
-        }
-
-        if(cancelled)return;
-        setLastSyncedAt(updatedAt?new Date(updatedAt).toLocaleString("vi-VN"):"Vừa xong");
-        setSyncReady(true);
-        setSyncStatus("synced");
-      }catch(error){
-        if(cancelled)return;
-        setSyncReady(false);
-        setSyncUser(null);
-        if(error.code==="AUTH_REQUIRED"){
-          setSyncStatus("signed_out");
-          return;
-        }
-        if(error.code==="AUTH_FORBIDDEN"){
-          setSyncStatus("forbidden");
-          setToast("Tài khoản này chưa được cấp quyền đồng bộ");
-          return;
-        }
-        console.error("Không thể kết nối đồng bộ:",error);
-        setSyncStatus("error");
-        setToast(error.message||"Không thể kết nối Google Sheets");
-      }
-    };
-
-    connect();
-    return()=>{cancelled=true};
-  },[hydrated]);
-  useEffect(() => {
-    if(!hydrated||!syncReady||!syncUser)return;
-
-    const timer=setTimeout(async()=>{
-      try{
-        setSyncStatus("saving");
-        const result=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
-        setLastSyncedAt(result.updatedAt?new Date(result.updatedAt).toLocaleString("vi-VN"):"Vừa xong");
-        setSyncStatus("synced");
-      }catch(error){
-        console.error("Không thể tự động đồng bộ:",error);
-        if(error.code==="AUTH_REQUIRED"){
-          setSyncUser(null);
-          setSyncReady(false);
-          setSyncStatus("signed_out");
-        }else setSyncStatus("error");
-      }
-    },900);
-
-    return()=>clearTimeout(timer);
-  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,syncReady,syncUser]);
   useEffect(() => {
     if(!hydrated)return;
 
@@ -628,10 +447,9 @@ export default function Home() {
           if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
           if(Array.isArray(data.goals))setGoals(data.goals);
           if(Array.isArray(data.notes))setNotes(data.notes);
-          if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
           if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
         }else{
-          appsScriptSnapshotRef.current=JSON.stringify({version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme});
+          appsScriptSnapshotRef.current=JSON.stringify({version:1,habits,completionHistory,goals,notes,theme});
         }
 
         appsScriptDirtyRef.current=false;
@@ -650,7 +468,7 @@ export default function Home() {
   useEffect(() => {
     if(!hydrated||!appsScriptReady)return;
 
-    const data={version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme};
+    const data={version:1,habits,completionHistory,goals,notes,theme};
     const snapshot=JSON.stringify(data);
     if(snapshot===appsScriptSnapshotRef.current)return;
 
@@ -676,7 +494,7 @@ export default function Home() {
       cancelled=true;
       clearTimeout(timer);
     };
-  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,appsScriptReady]);
+  },[habits,completionHistory,goals,notes,theme,hydrated,appsScriptReady]);
   useEffect(() => {
     if(!hydrated||!appsScriptReady)return;
 
@@ -694,7 +512,6 @@ export default function Home() {
         if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
         if(Array.isArray(data.goals))setGoals(data.goals);
         if(Array.isArray(data.notes))setNotes(data.notes);
-        if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
         if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
         setManualSyncStatus("synced");
       }catch(error){
@@ -723,28 +540,10 @@ export default function Home() {
   },[toast]);
 
   const notify=message=>setToast(message);
-  const syncNow=async()=>{
-    if(!syncUser)return;
-    try{
-      setSyncStatus("saving");
-      const result=await saveCloudState({habits,completionHistory,goals,notes,unlockedAchievements,theme});
-      setLastSyncedAt(result.updatedAt?new Date(result.updatedAt).toLocaleString("vi-VN"):"Vừa xong");
-      setSyncReady(true);
-      setSyncStatus("synced");
-      notify("Đã đồng bộ dữ liệu lên Google Sheets");
-    }catch(error){
-      if(error.code==="AUTH_REQUIRED"){
-        setSyncUser(null);
-        setSyncReady(false);
-        setSyncStatus("signed_out");
-      }else setSyncStatus("error");
-      notify(error.message||"Không thể đồng bộ Google Sheets");
-    }
-  };
   const backupToAppsScript=async()=>{
     setManualSyncStatus("saving");
     try{
-      const data={version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme};
+      const data={version:1,habits,completionHistory,goals,notes,theme};
       await saveDataToGoogle(data);
       appsScriptSnapshotRef.current=JSON.stringify(data);
       appsScriptDirtyRef.current=false;
@@ -771,7 +570,6 @@ export default function Home() {
       if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
       if(Array.isArray(data.goals))setGoals(data.goals);
       if(Array.isArray(data.notes))setNotes(data.notes);
-      if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
       if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
       setAppsScriptReady(true);
       setManualSyncStatus("synced");
@@ -815,7 +613,7 @@ export default function Home() {
       setHabits(habits.map(h=>h.id===editingHabit.id?{...h,...form,name:form.name.trim(),icon,color,period,category:form.category}:h));
       notify("Đã cập nhật thói quen");
     } else {
-      setHabits([...habits,{id:Date.now(),...form,name:form.name.trim(),detail:"Chưa thực hiện",icon,color,progress:0,done:false,period,streak:0,rate:0,category:form.category}]);
+      setHabits([...habits,{id:Date.now(),...form,name:form.name.trim(),detail:"Chưa thực hiện",icon,color,progress:0,done:false,period,rate:0,category:form.category}]);
       notify("Đã thêm thói quen mới");
     }
     setEditingHabit(null);
@@ -827,13 +625,12 @@ export default function Home() {
     notify("Đã xóa thói quen");
   };
   const resetData=()=>{
-    setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);setUnlockedAchievements(DEFAULT_ACHIEVEMENTS);
+    setHabits(seedHabits);setGoals(goalsSeed);setNotes(notesSeed);
     setCompletionHistory({[CURRENT_DATE_KEY]:seedHabits.filter(h=>h.done).map(h=>h.id)});
     localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
     localStorage.setItem("habitflow-reset-version",RESET_VERSION);
     notify("Đã khôi phục dữ liệu mẫu");
   };
-  const resetAchievements=()=>{setUnlockedAchievements([]);notify("Đã đặt lại toàn bộ thành tựu")};
   const selectDate=day=>{setSelectedDay(day);setView("Chi tiết ngày")};
   const saveGoal=data=>{
     if(editingGoal){
@@ -848,7 +645,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} unlockedAchievements={unlockedAchievements} toggle={toggle} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} completionHistory={completionHistory} toggle={toggle} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
@@ -856,15 +653,13 @@ export default function Home() {
   else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
   else if(view==="Thống kê") content=<StatisticsView habits={habits}/>;
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
-  else if(view==="Thành tựu") content=<AchievementsView unlockedIds={unlockedAchievements} onReset={resetAchievements}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
-  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} sync={{user:syncUser,status:syncStatus,lastSyncedAt,syncNow,staticMode:IS_STATIC_PAGES,signInUrl:IS_STATIC_PAGES?`${SYNC_APP_URL}/signin-with-chatgpt?return_to=%2F`:"/signin-with-chatgpt?return_to=%2F",signOutUrl:"/signout-with-chatgpt?return_to=%2F"}} manualSync={{status:manualSyncStatus,backup:backupToAppsScript,restore:restoreFromAppsScript}}/>;
+  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} manualSync={{status:manualSyncStatus,backup:backupToAppsScript,restore:restoreFromAppsScript}}/>;
 
   return <div className={`app ${theme}`} data-hydrated={hydrated?"true":"false"}>
     <aside className={mobile ? "sidebar open" : "sidebar"}>
       <button className="brand" onClick={()=>navigate("Tổng quan")}><span><Check /></span>Habit<span>Flow</span></button>
       <nav>{nav.map(([label, Icon]) => <button key={label} className={(view===label||(label==="Thói quen"&&view==="Thêm thói quen")||(label==="Lịch"&&view==="Chi tiết ngày")) ? "active" : ""} onClick={() => navigate(label)}><Icon />{label}</button>)}</nav>
-      <div className="encourage"><Trophy/><strong>Bắt đầu chuỗi ngày mới!</strong><p>Hoàn thành thói quen mỗi ngày để xây dựng chuỗi của bạn.</p><a>{longestStreak(habits)} ngày liên tiếp</a><div><i style={{width:`${Math.min(100,longestStreak(habits)/7*100)}%`}}/></div></div>
     </aside>
     {mobile && <div className="scrim" onClick={()=>setMobile(false)}/>}
     <main>

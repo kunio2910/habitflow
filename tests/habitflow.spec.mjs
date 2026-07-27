@@ -19,7 +19,6 @@ test("dữ liệu mẫu và tất cả màn hình chính hiển thị không l�
     ["Báo cáo", "Báo cáo"],
     ["Thống kê", "Thống kê"],
     ["Mục tiêu", "Mục tiêu của tôi"],
-    ["Thành tựu", "Thành tựu của tôi"],
     ["Ghi chú", "Ghi chú"],
     ["Cài đặt", "Cài đặt"]
   ];
@@ -32,14 +31,6 @@ test("dữ liệu mẫu và tất cả màn hình chính hiển thị không l�
   await page.locator("aside nav").getByRole("button", { name: "Thói quen", exact: true }).click();
   await expect(page.locator(".habit-card")).toHaveCount(10);
   expect(errors).toEqual([]);
-});
-
-test("đồng bộ tự động không yêu cầu nhập mã trên từng thiết bị", async ({ page }) => {
-  await page.locator("aside nav").getByRole("button", { name: "Cài đặt", exact: true }).click();
-
-  await expect(page.getByRole("heading", { name: "Đồng bộ tự động" })).toBeVisible();
-  await expect(page.getByLabel("Mã đồng bộ Google Sheets")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Đăng nhập để đồng bộ" })).toBeVisible();
 });
 
 test("tìm kiếm, thêm thói quen và lưu qua lần tải lại", async ({ page }) => {
@@ -132,29 +123,13 @@ test("chỉnh sửa ghi chú và lưu qua reload", async ({ page }) => {
   await expect(page.getByText("Điều tuyệt vời hôm nay", { exact: true })).toBeVisible();
 });
 
-test("giao diện tối và trạng thái thành tựu được ghi nhớ", async ({ page }) => {
+test("giao diện tối được ghi nhớ", async ({ page }) => {
   await page.locator("aside nav").getByRole("button", { name: "Cài đặt", exact: true }).click();
   await page.getByRole("button", { name: "Chuyển tối" }).click();
   await expect(page.locator("body")).toHaveClass(/dark-mode/);
   await page.reload();
   await expect(page.locator("body")).toHaveClass(/dark-mode/);
 
-  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
-  await page.getByRole("button", { name: /Đặt lại thành tựu/ }).click();
-  await expect(page.getByRole("heading", { name: "Đặt lại thành tựu?" })).toBeVisible();
-  await page.getByRole("button", { name: "Đặt lại", exact: true }).click();
-  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
-  await page.reload();
-  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
-  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
-});
-
-test("chuỗi ngày và thành tích mặc định đã được đặt lại", async ({ page }) => {
-  const streakCard=page.locator(".stat").filter({ hasText: "Chuỗi ngày hiện tại" });
-  await expect(streakCard.locator("strong")).toHaveText("0");
-  await expect(page.getByText("Chưa có thành tích", { exact: true })).toBeVisible();
-  await page.locator("aside nav").getByRole("button", { name: "Thành tựu", exact: true }).click();
-  await expect(page.getByText("Đã đạt được (0)", { exact: true })).toBeVisible();
 });
 
 test("ngày chưa có dữ liệu không tự động hiển thị hoàn thành", async ({ page }) => {
