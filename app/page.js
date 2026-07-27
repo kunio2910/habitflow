@@ -11,7 +11,8 @@ import {
   UserRound, Grid2X2, CalendarCheck, Save,
   CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
   Database, Volume2, Trash2,
-  CloudUpload, CloudDownload
+  CloudUpload, CloudDownload, Star, Footprints, Bike, Apple,
+  BedDouble, Music2, WalletCards, Paintbrush, Laptop, Salad
 } from "lucide-react";
 
 const seedHabits = [
@@ -79,8 +80,19 @@ function completedHabitsForDay(habits, completionHistory, day) {
 
 const IconMap = {
   water: Droplets, sport: Dumbbell, book: BookOpen, brain: Brain,
-  language: Languages, journal: NotebookPen, candy: CandyOff, moon: Moon
+  language: Languages, journal: NotebookPen, candy: CandyOff, moon: Moon,
+  walk: Footprints, bike: Bike, apple: Apple, sleep: BedDouble,
+  music: Music2, finance: WalletCards, creative: Paintbrush,
+  work: Laptop, nutrition: Salad
 };
+
+const habitIconChoices = [
+  ["water","Nước","blue"],["sport","Thể thao","green"],["book","Đọc sách","orange"],
+  ["brain","Thiền","purple"],["language","Ngoại ngữ","yellow"],["journal","Ghi chép","slate"],
+  ["walk","Đi bộ","green"],["bike","Đạp xe","blue"],["apple","Sức khỏe","pink"],
+  ["sleep","Giấc ngủ","indigo"],["music","Âm nhạc","purple"],["finance","Tài chính","yellow"],
+  ["creative","Sáng tạo","orange"],["work","Công việc","blue"],["nutrition","Dinh dưỡng","green"]
+];
 
 const nav = [
   ["Tổng quan", LayoutDashboard], ["Thói quen", ListChecks],
@@ -127,7 +139,7 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, openProgress, openAdd, setView, onSelectDate }) {
   const visibleHabits=habits.filter(h=>!h.hidden);
   const completedHabits=visibleHabits.filter(h=>h.done);
   const done = completedHabits.length;
@@ -137,7 +149,7 @@ function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="home-stack">
-      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
+      <CalendarMini habits={habits} completionHistory={completionHistory} setView={setView} onSelectDate={onSelectDate}/>
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
           <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
@@ -155,12 +167,18 @@ function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
   </>;
 }
 
-function CalendarMini({ setView, onSelectDate }) {
+function CalendarMini({ habits, completionHistory, setView, onSelectDate }) {
   const year=CURRENT_DATE.getFullYear();
   const month=CURRENT_DATE.getMonth();
   const daysInMonth=new Date(year,month+1,0).getDate();
   const firstWeekday=(new Date(year,month,1).getDay()+6)%7;
   const dates=[...Array(daysInMonth)].map((_,index)=>new Date(year,month,index+1));
+  const visibleHabits=habits.filter(h=>!h.hidden);
+  const dayProgress=date=>{
+    const completedIds=new Set(completionHistory[dateKey(date)]||[]);
+    const completed=visibleHabits.filter(h=>completedIds.has(h.id)).length;
+    return visibleHabits.length?Math.min(100,Math.round(completed/visibleHabits.length*100)):0;
+  };
   return <div className="calendar compact card">
     <div className="compact-calendar-head">
       <div className="compact-calendar-title"><span><CalendarDays/></span><div><small>LỊCH THÁNG</small><strong>{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</strong></div></div>
@@ -170,7 +188,14 @@ function CalendarMini({ setView, onSelectDate }) {
       <div className="compact-weekdays">{week.map(label=><b key={label}>{label}</b>)}</div>
       <div className="compact-days">
         {[...Array(firstWeekday)].map((_,index)=><i aria-hidden="true" key={`empty-${index}`}/>)}
-        {dates.map(date=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><span>{date.getDate()}</span></button>)}
+        {dates.map(date=>{
+          const progress=dayProgress(date);
+          const future=dateKey(date)>dateKey();
+          return <button aria-label={`Xem tiến độ ${formatVietnameseDate(date,{day:"numeric",month:"long"})}: ${progress}%`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}>
+            <span className="compact-day-number">{date.getDate()}</span>
+            {!future&&(progress===100?<Star className="day-star" fill="currentColor"/>:<small className="day-percent">{progress}%</small>)}
+          </button>;
+        })}
       </div>
     </div>
   </div>;
@@ -251,10 +276,12 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
     frequency:initialHabit.frequency||"Hàng ngày",
     times:initialTimes,
     hidden:initialHabit.hidden??false,
+    icon:initialHabit.icon||"water",
+    color:initialHabit.color||"blue",
     reminder:initialHabit.reminder??true,
     goal:initialHabit.goal||"Số lượng",
     amount:initialHabit.amount||"1"
-  } : { name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", times:["Buổi sáng"], hidden:false, reminder:true, goal:"Số lượng", amount:"1" });
+  } : { name:"", note:"", category:"Sức khỏe", frequency:"Hàng ngày", times:["Buổi sáng"], hidden:false, icon:"water", color:"blue", reminder:true, goal:"Số lượng", amount:"1" });
   const set = (key, value) => setForm({...form,[key]:value});
   const toggleTime = time => set("times",form.times.includes(time)?(form.times.length===1?form.times:form.times.filter(item=>item!==time)):[...form.times,time]);
   const categories = [["Sức khỏe",HeartPulse],["Học tập",BookOpen],["Phát triển bản thân",UserRound],["Công việc",BriefcaseBusiness],["Khác",Grid2X2]];
@@ -266,6 +293,7 @@ function AddHabitView({ onBack, onSave, initialHabit }) {
       <label>Tên thói quen<input value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Ví dụ: Đọc sách 20 trang"/></label>
       <label>Mô tả (tùy chọn)<input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ghi chú thêm về thói quen này..."/></label>
       <fieldset><legend>Danh mục</legend><div className="category-picks">{categories.map(([name,I])=><button type="button" onClick={()=>set("category",name)} className={form.category===name?"selected":""} key={name}><I/><span>{name}</span></button>)}</div></fieldset>
+      <fieldset><legend>Icon thói quen <small className="legend-hint">Chọn biểu tượng phù hợp</small></legend><div className="icon-picks">{habitIconChoices.map(([icon,label,color])=><button type="button" onClick={()=>setForm({...form,icon,color})} className={form.icon===icon?"selected":""} title={label} key={icon}><HabitIcon icon={icon} color={color}/><span>{label}</span>{form.icon===icon&&<Check className="pick-check"/>}</button>)}</div></fieldset>
       <fieldset><legend>Tần suất</legend><div className="choice-row">{["Hàng ngày","Hàng tuần","Tùy chọn"].map(x=><button type="button" onClick={()=>set("frequency",x)} className={form.frequency===x?"selected":""} key={x}><CalendarCheck/>{x}</button>)}</div></fieldset>
       <fieldset><legend>Thời gian <small className="legend-hint">Có thể chọn nhiều</small></legend><div className="time-picks">{[["Buổi sáng","05:00 - 12:00",Coffee],["Buổi chiều","12:00 - 17:00",Sun],["Buổi tối","17:00 - 21:00",CloudMoon],["Trước khi ngủ","21:00 - 05:00",Moon]].map(([a,b,I])=><button type="button" onClick={()=>toggleTime(a)} className={form.times.includes(a)?"selected":""} key={a}><I/><strong>{a}</strong><small>{b}</small>{form.times.includes(a)&&<Check className="pick-check"/>}</button>)}</div></fieldset>
       <div className="visibility-setting"><div><strong>Hiển thị ở Tiến độ hôm nay</strong><span>{form.hidden?"Thói quen đang được ẩn và không tính vào % hoàn thành.":"Thói quen đang hiển thị và được tính vào % hoàn thành."}</span></div><button type="button" aria-pressed={!form.hidden} className={!form.hidden?"switch on":"switch"} onClick={()=>set("hidden",!form.hidden)}><i/></button></div>
@@ -639,7 +667,9 @@ export default function Home() {
   const navigate = label => { setView(label); setMobile(false); };
   const saveHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
-    const [icon,color] = categoryMap[form.category] || ["journal","slate"];
+    const [defaultIcon,defaultColor] = categoryMap[form.category] || ["journal","slate"];
+    const icon=form.icon||defaultIcon;
+    const color=form.color||defaultColor;
     const times=form.times?.length?form.times:["Buổi sáng"];
     const period=times.map(time=>time.replace("Buổi ","")).join(", ");
     if(editingHabit){
@@ -678,7 +708,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan") content=<Overview habits={habits} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;

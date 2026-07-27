@@ -110,3 +110,24 @@ body.dark-mode .compact-calendar-head{background:linear-gradient(135deg,#1b1c28,
 body.dark-mode .compact-calendar-link{background:#181a24;border-color:#393250}
 body.dark-mode .compact-days button{color:#c4c6d1}
 @media(max-width:600px){.compact-calendar-head,.compact-calendar-body{padding-left:14px;padding-right:14px}.compact-days,.compact-weekdays{gap:3px}.compact-days button,.compact-days>i{min-height:31px;height:31px}}
+
+/* Habit icon picker */
+.icon-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.icon-picks button{position:relative;min-height:76px;border:1px solid var(--border);background:#fafbfe;border-radius:10px;display:grid;place-items:center;align-content:center;gap:6px;color:var(--muted)}
+.icon-picks button.selected{border-color:var(--purple);background:var(--purple-soft);color:var(--purple);box-shadow:0 0 0 2px #6741f511}
+.icon-picks .habit-icon{width:34px;height:34px}
+.icon-picks .habit-icon svg{width:16px}
+.icon-picks button>span:last-of-type{font-size:7px}
+.icon-picks .pick-check{position:absolute;right:6px;top:6px;width:12px;height:12px}
+body.dark-mode .icon-picks button{background:#13151e}
+body.dark-mode .icon-picks button.selected{background:#2a2347}
+
+/* Daily progress markers in home calendar */
+.compact-days button{position:relative;display:flex;align-items:center;justify-content:center;gap:3px}
+.compact-day-number{font-size:10px;font-weight:600}
+.day-percent{font-size:6px;color:var(--muted);line-height:1}
+.day-star{width:10px;height:10px;color:#f3b817;filter:drop-shadow(0 1px 2px #d59b2638)}
+.compact-days button.current .day-percent{color:#e9e5ff}
+.compact-days button.current .day-star{color:#ffd65a}
+@media(max-width:800px){.icon-picks{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:480px){.icon-picks{grid-template-columns:repeat(2,1fr)}.day-percent{font-size:5px}.day-star{width:9px;height:9px}}
