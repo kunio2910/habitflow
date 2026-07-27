@@ -486,7 +486,9 @@ export default function Home() {
   const [syncReady,setSyncReady]=useState(false);
   const [lastSyncedAt,setLastSyncedAt]=useState("");
   const [manualSyncStatus,setManualSyncStatus]=useState("");
+  const [appsScriptReady,setAppsScriptReady]=useState(false);
   const appsScriptSnapshotRef=useRef(null);
+  const appsScriptDirtyRef=useRef(false);
 
   useEffect(() => {
     const read=(key,fallback)=>{
@@ -613,17 +615,46 @@ export default function Home() {
   useEffect(() => {
     if(!hydrated)return;
 
+    let cancelled=false;
+    const initialize=async()=>{
+      try{
+        setManualSyncStatus("loading");
+        const data=await loadDataFromGoogle();
+        if(cancelled)return;
+
+        if(data){
+          appsScriptSnapshotRef.current=JSON.stringify(data);
+          if(Array.isArray(data.habits))setHabits(data.habits);
+          if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
+          if(Array.isArray(data.goals))setGoals(data.goals);
+          if(Array.isArray(data.notes))setNotes(data.notes);
+          if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
+          if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
+        }else{
+          appsScriptSnapshotRef.current=JSON.stringify({version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme});
+        }
+
+        appsScriptDirtyRef.current=false;
+        setAppsScriptReady(true);
+        setManualSyncStatus("synced");
+      }catch(error){
+        if(cancelled)return;
+        console.error("Không thể tải dữ liệu ban đầu từ Apps Script:",error);
+        setManualSyncStatus("error");
+      }
+    };
+
+    initialize();
+    return()=>{cancelled=true};
+  },[hydrated]);
+  useEffect(() => {
+    if(!hydrated||!appsScriptReady)return;
+
     const data={version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme};
     const snapshot=JSON.stringify(data);
-
-    // Ghi nhận trạng thái đầu tiên sau khi đọc localStorage, không tự ghi đè
-    // Google Sheets ngay lúc vừa mở trang.
-    if(appsScriptSnapshotRef.current===null){
-      appsScriptSnapshotRef.current=snapshot;
-      return;
-    }
     if(snapshot===appsScriptSnapshotRef.current)return;
 
+    appsScriptDirtyRef.current=true;
     let cancelled=false;
     setManualSyncStatus("waiting");
     const timer=setTimeout(async()=>{
@@ -632,6 +663,7 @@ export default function Home() {
         await saveDataToGoogle(data);
         if(cancelled)return;
         appsScriptSnapshotRef.current=snapshot;
+        appsScriptDirtyRef.current=false;
         setManualSyncStatus("synced");
       }catch(error){
         if(cancelled)return;
@@ -644,7 +676,45 @@ export default function Home() {
       cancelled=true;
       clearTimeout(timer);
     };
-  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated]);
+  },[habits,completionHistory,goals,notes,unlockedAchievements,theme,hydrated,appsScriptReady]);
+  useEffect(() => {
+    if(!hydrated||!appsScriptReady)return;
+
+    let cancelled=false;
+    const pullLatest=async()=>{
+      if(appsScriptDirtyRef.current||document.visibilityState==="hidden")return;
+      try{
+        const data=await loadDataFromGoogle();
+        if(cancelled||!data)return;
+        const snapshot=JSON.stringify(data);
+        if(snapshot===appsScriptSnapshotRef.current)return;
+
+        appsScriptSnapshotRef.current=snapshot;
+        if(Array.isArray(data.habits))setHabits(data.habits);
+        if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
+        if(Array.isArray(data.goals))setGoals(data.goals);
+        if(Array.isArray(data.notes))setNotes(data.notes);
+        if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
+        if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
+        setManualSyncStatus("synced");
+      }catch(error){
+        if(cancelled)return;
+        console.error("Không thể tải bản cập nhật từ Apps Script:",error);
+        setManualSyncStatus("error");
+      }
+    };
+
+    const interval=setInterval(pullLatest,5000);
+    const refresh=()=>pullLatest();
+    window.addEventListener("focus",refresh);
+    document.addEventListener("visibilitychange",refresh);
+    return()=>{
+      cancelled=true;
+      clearInterval(interval);
+      window.removeEventListener("focus",refresh);
+      document.removeEventListener("visibilitychange",refresh);
+    };
+  },[hydrated,appsScriptReady]);
   useEffect(() => { window.scrollTo({top:0,behavior:"smooth"}); }, [view]);
   useEffect(() => {
     if(!toast)return;
@@ -674,13 +744,16 @@ export default function Home() {
   const backupToAppsScript=async()=>{
     setManualSyncStatus("saving");
     try{
-      await saveDataToGoogle({version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme});
+      const data={version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme};
+      await saveDataToGoogle(data);
+      appsScriptSnapshotRef.current=JSON.stringify(data);
+      appsScriptDirtyRef.current=false;
+      setManualSyncStatus("synced");
       notify("Đã sao lưu qua Google Apps Script");
     }catch(error){
       console.error("Không thể sao lưu qua Apps Script:",error);
+      setManualSyncStatus("error");
       notify(error.message||"Sao lưu Apps Script thất bại");
-    }finally{
-      setManualSyncStatus("");
     }
   };
   const restoreFromAppsScript=async()=>{
@@ -688,21 +761,25 @@ export default function Home() {
     try{
       const data=await loadDataFromGoogle();
       if(!data){
+        setManualSyncStatus("synced");
         notify("Apps Script chưa có bản sao lưu");
         return;
       }
+      appsScriptSnapshotRef.current=JSON.stringify(data);
+      appsScriptDirtyRef.current=false;
       if(Array.isArray(data.habits))setHabits(data.habits);
       if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
       if(Array.isArray(data.goals))setGoals(data.goals);
       if(Array.isArray(data.notes))setNotes(data.notes);
       if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
       if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
+      setAppsScriptReady(true);
+      setManualSyncStatus("synced");
       notify("Đã khôi phục dữ liệu từ Apps Script");
     }catch(error){
       console.error("Không thể khôi phục qua Apps Script:",error);
+      setManualSyncStatus("error");
       notify(error.message||"Khôi phục Apps Script thất bại");
-    }finally{
-      setManualSyncStatus("");
     }
   };
   const recordCompletion=(id,done)=>{
