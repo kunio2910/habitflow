@@ -728,8 +728,6 @@ export default function Home() {
     <main>
       <header>
         <button aria-label="Mở menu" className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
-        <div className="search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&setView("Thói quen")} placeholder="Tìm thói quen..."/>{query&&<button aria-label="Xóa tìm kiếm" onClick={()=>setQuery("")}><X/></button>}</div>
-        <button aria-label="Thông báo" className="icon-btn"><Bell/></button>
       </header>
       <div className="view-shell">{content}</div>
     </main>
