@@ -65,6 +65,13 @@ function currentWeekDates(reference = CURRENT_DATE) {
   });
 }
 
+function greetingForDate(date = new Date()) {
+  const hour=date.getHours();
+  if(hour<12)return "Chào buổi sáng!";
+  if(hour<18)return "Chào buổi chiều!";
+  return "Chào buổi tối!";
+}
+
 function completedHabitsForDay(habits, completionHistory, day) {
   const ids = new Set(completionHistory[dateKey(day)] || []);
   return habits.filter(h => ids.has(h.id));
@@ -130,7 +137,7 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
   const [filter, setFilter] = useState("Tất cả");
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
-    <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>Chào buổi sáng! <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="stats">
       <StatCard label="Thói quen hoàn thành" value={`${done} / ${habits.length}`} sub="Hôm nay" ring={percent}/>
       <StatCard label="Tổng hoàn thành" value={totalCompletions(completionHistory)} sub="thói quen" icon={TrendingUp} tone="blue"/>
@@ -154,11 +161,19 @@ function Overview({ habits, completionHistory, toggle, openProgress, openAdd, se
 }
 
 function CalendarMini({ setView, onSelectDate }) {
-  const dates=currentWeekDates();
+  const year=CURRENT_DATE.getFullYear();
+  const month=CURRENT_DATE.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const firstWeekday=(new Date(year,month,1).getDay()+6)%7;
+  const dates=[...Array(daysInMonth)].map((_,index)=>new Date(year,month,index+1));
   return <div className="calendar compact card">
     <SectionHead title="Lịch"><button className="link" onClick={()=>setView("Lịch")}>Xem đầy đủ</button></SectionHead>
     <div className="compact-month">{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</div>
-    <div className="compact-days">{dates.map((date,index)=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><b>{week[index]}</b><span>{date.getDate()}</span></button>)}</div>
+    <div className="compact-weekdays">{week.map(label=><b key={label}>{label}</b>)}</div>
+    <div className="compact-days">
+      {[...Array(firstWeekday)].map((_,index)=><i aria-hidden="true" key={`empty-${index}`}/>)}
+      {dates.map(date=><button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}><span>{date.getDate()}</span></button>)}
+    </div>
   </div>;
 }
 

@@ -8,7 +8,7 @@ const fullDateLabel=date=>new Intl.DateTimeFormat("vi-VN",{day:"numeric",month:"
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Chào buổi sáng/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Chào buổi (sáng|chiều|tối)/ })).toBeVisible();
   await expect(page.locator(".app")).toHaveAttribute("data-hydrated", "true");
 });
 
