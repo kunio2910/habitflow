@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ListChecks, CalendarDays, BarChart3, Settings, Bell,
   Droplets, Dumbbell, BookOpen, Brain, Languages, NotebookPen, CandyOff,
   Moon, TrendingUp, Plus, Check, ChevronLeft, ChevronRight,
-  Trophy, Target, X, Menu, Search, Sparkles, SlidersHorizontal, Goal,
+  Trophy, Target, X, Menu, Search, SlidersHorizontal, Goal,
   StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
   UserRound, Grid2X2, CalendarCheck, Save,
   CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
@@ -83,7 +83,7 @@ const IconMap = {
 };
 
 const nav = [
-  ["Tổng quan", LayoutDashboard], ["Thói quen", ListChecks], ["Hôm nay", Sparkles],
+  ["Tổng quan", LayoutDashboard], ["Thói quen", ListChecks],
   ["Lịch", CalendarDays], ["Báo cáo", BarChart3], ["Thống kê", TrendingUp],
   ["Mục tiêu", Goal], ["Ghi chú", StickyNote], ["Cài đặt", Settings]
 ];
@@ -135,7 +135,8 @@ function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
   const shown = filter === "Tất cả" ? habits : habits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
-    <section className="dashboard-grid home-progress-grid">
+    <section className="home-stack">
+      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
           <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
@@ -148,7 +149,6 @@ function Overview({ habits, openProgress, openAdd, setView, onSelectDate }) {
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
-      <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
     </section>
     <ReportSummary habits={habits}/>
   </>;
@@ -665,7 +665,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan"||view==="Hôm nay") content=<Overview habits={habits} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan") content=<Overview habits={habits} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
