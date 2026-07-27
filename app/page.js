@@ -11,7 +11,7 @@ import {
   UserRound, Grid2X2, CalendarCheck, Save,
   CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
   Database, Volume2, Trash2,
-  CloudUpload, CloudDownload, Star, Footprints, Bike, Apple,
+  CloudUpload, CloudDownload, GripVertical, Footprints, Bike, Apple,
   BedDouble, Music2, WalletCards, Paintbrush, Laptop, Salad
 } from "lucide-react";
 
@@ -139,46 +139,51 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, setView, onSelectDate }) {
+function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, setView, onSelectDate, onReorderHabits }) {
   const visibleHabits=habits.filter(h=>!h.hidden);
   const completedHabits=visibleHabits.filter(h=>h.done);
   const done = completedHabits.length;
   const percent = Math.round(done / visibleHabits.length * 100) || 0;
   const [filter, setFilter] = useState("Tất cả");
+  const [draggedHabitId,setDraggedHabitId]=useState(null);
+  const [dragOverHabitId,setDragOverHabitId]=useState(null);
   const shown = filter === "Tất cả" ? visibleHabits : visibleHabits.filter(h => filter === "Hoàn thành" ? h.done : !h.done);
+  const endDrag=()=>{
+    setDraggedHabitId(null);
+    setDragOverHabitId(null);
+  };
+  const dropHabit=targetId=>{
+    if(draggedHabitId&&draggedHabitId!==targetId)onReorderHabits(draggedHabitId,targetId);
+    endDrag();
+  };
   return <>
     <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="home-stack">
-      <CalendarMini habits={habits} completionHistory={completionHistory} setView={setView} onSelectDate={onSelectDate}/>
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
           <div className="filters"><SlidersHorizontal/>{["Tất cả","Chưa xong","Hoàn thành"].map(f=><button className={filter===f?"selected":""} key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
         </SectionHead>
         <div className="progress"><i style={{width:`${percent}%`}}/></div>
         {completedHabits.length>0&&<div className="today-completed"><span>Đã hoàn thành</span><div className="completed-icons">{completedHabits.map(h=><HabitIcon habit={h} key={h.id}/>)}</div></div>}
-        <div className="habit-list">{shown.map(h => <div className="habit interactive-habit" role="button" tabIndex={0} onClick={()=>openProgress(h)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProgress(h)}}} key={h.id}>
+        <div className="habit-list today-habit-list">{shown.map(h => <div className={`habit interactive-habit today-habit-card ${draggedHabitId===h.id?"dragging":""} ${dragOverHabitId===h.id&&draggedHabitId!==h.id?"drop-target":""}`} onClick={()=>openProgress(h)} onDragOver={e=>{e.preventDefault();setDragOverHabitId(h.id)}} onDragLeave={()=>setDragOverHabitId(id=>id===h.id?null:id)} onDrop={e=>{e.preventDefault();dropHabit(h.id)}} key={h.id}>
+          <button className="habit-drag-handle" aria-label={`Kéo thói quen ${h.name} để sắp xếp`} title="Kéo để đổi vị trí" draggable onClick={e=>e.stopPropagation()} onDragStart={e=>{e.stopPropagation();e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",String(h.id));setDraggedHabitId(h.id)}} onDragEnd={endDrag}><GripVertical/></button>
           <button className="habit-edit-trigger" aria-label={`Chỉnh sửa thói quen ${h.name}`} onClick={e=>{e.stopPropagation();onEdit(h)}}><HabitIcon habit={h}/></button><div className="habit-info"><strong>{h.name}</strong><span>{h.detail} · {h.period}</span></div>
-          <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={e=>{e.stopPropagation();openProgress(h)}}><Ring value={h.progress} size={44}/></button>
+          <button className="progress-trigger" aria-label={`Cập nhật tiến độ ${h.name}`} onClick={e=>{e.stopPropagation();openProgress(h)}}><Ring value={h.progress} size={56}/></button>
         </div>)}</div>
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
     </section>
     <ReportSummary habits={habits}/>
+    <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
   </>;
 }
 
-function CalendarMini({ habits, completionHistory, setView, onSelectDate }) {
+function CalendarMini({ setView, onSelectDate }) {
   const year=CURRENT_DATE.getFullYear();
   const month=CURRENT_DATE.getMonth();
   const daysInMonth=new Date(year,month+1,0).getDate();
   const firstWeekday=(new Date(year,month,1).getDay()+6)%7;
   const dates=[...Array(daysInMonth)].map((_,index)=>new Date(year,month,index+1));
-  const visibleHabits=habits.filter(h=>!h.hidden);
-  const dayProgress=date=>{
-    const completedIds=new Set(completionHistory[dateKey(date)]||[]);
-    const completed=visibleHabits.filter(h=>completedIds.has(h.id)).length;
-    return visibleHabits.length?Math.min(100,Math.round(completed/visibleHabits.length*100)):0;
-  };
   return <div className="calendar compact card">
     <div className="compact-calendar-head">
       <div className="compact-calendar-title"><span><CalendarDays/></span><div><small>LỊCH THÁNG</small><strong>{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</strong></div></div>
@@ -189,11 +194,8 @@ function CalendarMini({ habits, completionHistory, setView, onSelectDate }) {
       <div className="compact-days">
         {[...Array(firstWeekday)].map((_,index)=><i aria-hidden="true" key={`empty-${index}`}/>)}
         {dates.map(date=>{
-          const progress=dayProgress(date);
-          const future=dateKey(date)>dateKey();
-          return <button aria-label={`Xem tiến độ ${formatVietnameseDate(date,{day:"numeric",month:"long"})}: ${progress}%`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}>
+          return <button aria-label={`Xem thói quen hoàn thành ${formatVietnameseDate(date,{day:"numeric",month:"long"})}`} onClick={()=>onSelectDate(date)} className={dateKey(date)===dateKey()?"current":""} key={dateKey(date)}>
             <span className="compact-day-number">{date.getDate()}</span>
-            {!future&&(progress===100?<Star className="day-star" fill="currentColor"/>:<small className="day-percent">{progress}%</small>)}
           </button>;
         })}
       </div>
@@ -420,7 +422,7 @@ function ProgressModal({ habit, close, save }) {
     <h2>Cập nhật tiến độ</h2>
     <p>Điều chỉnh mức độ hoàn thành hôm nay của “{habit.name}”. Mốc 100% sẽ được ghi nhận là hoàn thành.</p>
     <div className="progress-editor">
-      <Ring value={progress} size={76}/>
+      <Ring value={progress} size={92}/>
       <label>Phần trăm hoàn thành<div className="progress-number"><input aria-label="Phần trăm tiến độ" type="number" min="0" max="100" value={progress} onChange={e=>setSafeProgress(e.target.value)}/><span>%</span></div></label>
     </div>
     <input aria-label="Thanh tiến độ" className="progress-range" type="range" min="0" max="100" step="1" value={progress} onChange={e=>setSafeProgress(e.target.value)}/>
@@ -664,6 +666,19 @@ export default function Home() {
     setProgressHabit(null);
     notify(`Đã cập nhật tiến độ thành ${progress}%`);
   };
+  const reorderHabits=(draggedId,targetId)=>{
+    if(draggedId===targetId)return;
+    setHabits(current=>{
+      const from=current.findIndex(h=>h.id===draggedId);
+      const to=current.findIndex(h=>h.id===targetId);
+      if(from<0||to<0)return current;
+      const next=[...current];
+      const [moved]=next.splice(from,1);
+      next.splice(to,0,moved);
+      return next;
+    });
+    notify("Đã sắp xếp lại thói quen");
+  };
   const navigate = label => { setView(label); setMobile(false); };
   const saveHabit = form => {
     const categoryMap = {"Sức khỏe":["water","blue"],"Học tập":["book","orange"],"Phát triển bản thân":["brain","purple"],"Công việc":["language","yellow"],"Khác":["journal","slate"]};
@@ -708,7 +723,7 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate}/>;
+  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate} onReorderHabits={reorderHabits}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
   else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
@@ -728,6 +743,7 @@ export default function Home() {
     <main>
       <header>
         <button aria-label="Mở menu" className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
+        <div className="search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&setView("Thói quen")} placeholder="Tìm thói quen..."/>{query&&<button aria-label="Xóa tìm kiếm" onClick={()=>setQuery("")}><X/></button>}</div>
       </header>
       <div className="view-shell">{content}</div>
     </main>
