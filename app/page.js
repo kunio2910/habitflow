@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadCloudState, saveCloudState } from "../lib/habitflowSync.js";
+import { loadDataFromGoogle, saveDataToGoogle } from "./lib/googleSheets";
 import {
   LayoutDashboard, ListChecks, CalendarDays, BarChart3, Settings, Bell,
   Droplets, Dumbbell, BookOpen, Brain, Languages, NotebookPen, CandyOff,
@@ -10,7 +11,8 @@ import {
   Medal, StickyNote, MoreVertical, ArrowLeft, BriefcaseBusiness, HeartPulse,
   UserRound, Grid2X2, CalendarCheck, Save, LockKeyhole, Award, Timer,
   CircleCheckBig, Flag, Coffee, Sun, CloudMoon, PencilLine, RotateCcw,
-  Database, Palette, Volume2, Trash2, Cloud, CloudOff, RefreshCw
+  Database, Palette, Volume2, Trash2, Cloud, CloudOff, RefreshCw,
+  CloudUpload, CloudDownload
 } from "lucide-react";
 
 const IS_STATIC_PAGES = process.env.NEXT_PUBLIC_STATIC_PAGES === "true";
@@ -385,7 +387,7 @@ function NotesView({ notes, setNotes, notify }) {
   </>;
 }
 
-function SettingsView({ resetData, notify, theme, toggleTheme, sync }) {
+function SettingsView({ resetData, notify, theme, toggleTheme, sync, manualSync }) {
   const [reminders,setReminders]=useState(true);
   const [sounds,setSounds]=useState(false);
   const statusText={
@@ -412,6 +414,8 @@ function SettingsView({ resetData, notify, theme, toggleTheme, sync }) {
           {sync.user&&<a className="secondary danger sync-signout" href={sync.signOutUrl}><CloudOff/> Đăng xuất</a>}
         </div>
       </section>
+      <section className="settings-card card"><div className="settings-icon purple"><CloudUpload/></div><div><h3>Sao lưu bằng Apps Script</h3><p>Lưu toàn bộ dữ liệu JSON qua endpoint Google Apps Script cá nhân.</p></div><button className="secondary" disabled={manualSync.status!==""} onClick={manualSync.backup}><CloudUpload/> {manualSync.status==="saving"?"Đang lưu...":"Sao lưu"}</button></section>
+      <section className="settings-card card"><div className="settings-icon blue"><CloudDownload/></div><div><h3>Khôi phục bằng Apps Script</h3><p>Tải bản JSON gần nhất từ trang tính Storage.</p></div><button className="secondary" disabled={manualSync.status!==""} onClick={manualSync.restore}><CloudDownload/> {manualSync.status==="loading"?"Đang tải...":"Khôi phục"}</button></section>
       <section className="settings-card card"><div className="settings-icon purple"><Bell/></div><div><h3>Nhắc nhở thói quen</h3><p>Nhận thông báo theo lịch bạn đã thiết lập.</p></div><button className={reminders?"switch on":"switch"} onClick={()=>{setReminders(!reminders);notify(`Đã ${reminders?"tắt":"bật"} nhắc nhở`)}}><i/></button></section>
       <section className="settings-card card"><div className="settings-icon blue"><Volume2/></div><div><h3>Âm thanh hoàn thành</h3><p>Phát âm thanh nhỏ khi bạn hoàn thành thói quen.</p></div><button className={sounds?"switch on":"switch"} onClick={()=>{setSounds(!sounds);notify(`Đã ${sounds?"tắt":"bật"} âm thanh`)}}><i/></button></section>
       <section className="settings-card card"><div className="settings-icon orange">{theme==="dark"?<Moon/>:<Sun/>}</div><div><h3>Giao diện</h3><p>{theme==="dark"?"Chế độ tối đang được sử dụng.":"Chế độ sáng đang được sử dụng."}</p></div><button className="secondary" onClick={toggleTheme}>{theme==="dark"?"Chuyển sáng":"Chuyển tối"}</button></section>
@@ -473,6 +477,7 @@ export default function Home() {
   const [syncStatus,setSyncStatus]=useState("connecting");
   const [syncReady,setSyncReady]=useState(false);
   const [lastSyncedAt,setLastSyncedAt]=useState("");
+  const [manualSyncStatus,setManualSyncStatus]=useState("");
 
   useEffect(() => {
     const read=(key,fallback)=>{
@@ -622,6 +627,40 @@ export default function Home() {
       notify(error.message||"Không thể đồng bộ Google Sheets");
     }
   };
+  const backupToAppsScript=async()=>{
+    setManualSyncStatus("saving");
+    try{
+      await saveDataToGoogle({version:1,habits,completionHistory,goals,notes,unlockedAchievements,theme});
+      notify("Đã sao lưu qua Google Apps Script");
+    }catch(error){
+      console.error("Không thể sao lưu qua Apps Script:",error);
+      notify(error.message||"Sao lưu Apps Script thất bại");
+    }finally{
+      setManualSyncStatus("");
+    }
+  };
+  const restoreFromAppsScript=async()=>{
+    setManualSyncStatus("loading");
+    try{
+      const data=await loadDataFromGoogle();
+      if(!data){
+        notify("Apps Script chưa có bản sao lưu");
+        return;
+      }
+      if(Array.isArray(data.habits))setHabits(data.habits);
+      if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
+      if(Array.isArray(data.goals))setGoals(data.goals);
+      if(Array.isArray(data.notes))setNotes(data.notes);
+      if(Array.isArray(data.unlockedAchievements))setUnlockedAchievements(data.unlockedAchievements);
+      if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
+      notify("Đã khôi phục dữ liệu từ Apps Script");
+    }catch(error){
+      console.error("Không thể khôi phục qua Apps Script:",error);
+      notify(error.message||"Khôi phục Apps Script thất bại");
+    }finally{
+      setManualSyncStatus("");
+    }
+  };
   const recordCompletion=(id,done)=>{
     setCompletionHistory(history=>{
       const ids=new Set(history[CURRENT_DATE_KEY]||[]);
@@ -698,7 +737,7 @@ export default function Home() {
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
   else if(view==="Thành tựu") content=<AchievementsView unlockedIds={unlockedAchievements} onReset={resetAchievements}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
-  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} sync={{user:syncUser,status:syncStatus,lastSyncedAt,syncNow,staticMode:IS_STATIC_PAGES,signInUrl:IS_STATIC_PAGES?`${SYNC_APP_URL}/signin-with-chatgpt?return_to=%2F`:"/signin-with-chatgpt?return_to=%2F",signOutUrl:"/signout-with-chatgpt?return_to=%2F"}}/>;
+  else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} sync={{user:syncUser,status:syncStatus,lastSyncedAt,syncNow,staticMode:IS_STATIC_PAGES,signInUrl:IS_STATIC_PAGES?`${SYNC_APP_URL}/signin-with-chatgpt?return_to=%2F`:"/signin-with-chatgpt?return_to=%2F",signOutUrl:"/signout-with-chatgpt?return_to=%2F"}} manualSync={{status:manualSyncStatus,backup:backupToAppsScript,restore:restoreFromAppsScript}}/>;
 
   return <div className={`app ${theme}`} data-hydrated={hydrated?"true":"false"}>
     <aside className={mobile ? "sidebar open" : "sidebar"}>
