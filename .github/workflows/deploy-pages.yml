@@ -38,6 +38,14 @@ jobs:
         env:
           GITHUB_PAGES: "true"
 
+      - name: Verify Pages artifact
+        shell: bash
+        run: |
+          test -s out/index.html
+          test -f out/.nojekyll
+          test -d out/_next/static
+          grep -q '/habitflow/_next/' out/index.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
@@ -53,3 +61,20 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed website
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for attempt in {1..12}; do
+            status="$(curl --silent --location --output /tmp/habitflow.html --write-out '%{http_code}' "${PAGE_URL}")"
+            if [ "$status" = "200" ] && grep -q '<title' /tmp/habitflow.html; then
+              echo "Website hoạt động tại ${PAGE_URL}"
+              exit 0
+            fi
+            echo "Lần kiểm tra ${attempt}: HTTP ${status}; thử lại sau 10 giây."
+            sleep 10
+          done
+          echo "Deployment không trả về trang HTML hợp lệ tại ${PAGE_URL}."
+          exit 1
