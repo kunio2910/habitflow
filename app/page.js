@@ -107,7 +107,7 @@ function historyStats(habits, completionHistory, days = currentWeekDates()) {
     map[habit.category]=(map[habit.category]||0)+habitTotals.find(item=>item.id===habit.id).completed;
     return map;
   },{});
-  return {visible,dailyCounts,dailyRates,total,average,habitTotals,categories};
+  return {visible,dailyCounts,dailyRates,total,average,habitTotals,categories,daysCount:days.length};
 }
 
 const IconMap = {
@@ -263,14 +263,14 @@ function ReportSummary({ habits, completionHistory }) {
     <SectionHead title="Báo cáo" label="PHÂN TÍCH TIẾN ĐỘ"><div className="tabs">{["Tuần","Tháng","Năm"].map(t=><button className={report===t?"selected":""} key={t} onClick={()=>setReport(t)}>{t}</button>)}</div></SectionHead>
     <div className="report-grid">
       <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">{stats.average}%</div><MiniLine values={stats.dailyRates}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
-      <HabitBars habits={stats.habitTotals}/>
+      <HabitBars habits={stats.habitTotals} daysCount={stats.daysCount}/>
       <CategoryDonut categories={stats.categories}/>
     </div>
   </section>;
 }
 
-function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
-  return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${h.rate}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
+function HabitBars({ habits, title = "Hoàn thành theo thói quen", daysCount = 7 }) {
+  return <div className="report-card habit-bars-card"><p>{title} <small>{habits.length} thói quen</small></p><div className="bars">{habits.map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${h.rate}%`}}/></i><b>{h.completed||0}/{daysCount} ngày</b><strong>{h.rate}%</strong></div>)}</div></div>;
 }
 
 function CategoryDonut({ categories = {} }) {
