@@ -46,8 +46,9 @@ const SAMPLE_VERSION = "habitflow-sample-v2";
 const RESET_VERSION = "habitflow-reset-progress-v1";
 const CURRENT_DATE = new Date();
 
-function dateKey(value = CURRENT_DATE) {
-  const date=value instanceof Date?value:new Date(CURRENT_DATE.getFullYear(),CURRENT_DATE.getMonth(),value);
+function dateKey(value = new Date()) {
+  const reference=new Date();
+  const date=value instanceof Date?value:new Date(reference.getFullYear(),reference.getMonth(),value);
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 }
 
@@ -55,7 +56,7 @@ function formatVietnameseDate(date, options) {
   return new Intl.DateTimeFormat("vi-VN",options).format(date);
 }
 
-function currentWeekDates(reference = CURRENT_DATE) {
+function currentWeekDates(reference = new Date()) {
   const monday=new Date(reference);
   const day=monday.getDay()||7;
   monday.setDate(monday.getDate()-day+1);
@@ -76,6 +77,37 @@ function greetingForDate(date = new Date()) {
 function completedHabitsForDay(habits, completionHistory, day) {
   const ids = new Set(completionHistory[dateKey(day)] || []);
   return habits.filter(h => ids.has(h.id));
+}
+
+function resetHabitsForNewDay(habits) {
+  return resetHabitRates(habits).map(habit=>({...habit,progress:0,done:false,detail:"Chưa thực hiện"}));
+}
+
+function normalizeHabitsForToday(habits, activeDate) {
+  return activeDate===dateKey()?resetHabitRates(habits):resetHabitsForNewDay(habits);
+}
+
+function visibleHabitsOf(habits) {
+  return habits.filter(habit=>!habit.hidden);
+}
+
+function historyStats(habits, completionHistory, days = currentWeekDates()) {
+  const visible=visibleHabitsOf(habits);
+  const habitIds=new Set(visible.map(h=>h.id));
+  const dailyCounts=days.map(day=>(completionHistory[dateKey(day)]||[]).filter(id=>habitIds.has(id)).length);
+  const dailyRates=dailyCounts.map(count=>visible.length?Math.round(count/visible.length*100):0);
+  const total=dailyCounts.reduce((sum,count)=>sum+count,0);
+  const average=dailyRates.length?Math.round(dailyRates.reduce((sum,rate)=>sum+rate,0)/dailyRates.length):0;
+  const habitTotals=visible.map(habit=>({
+    ...habit,
+    completed:days.reduce((sum,day)=>sum+((completionHistory[dateKey(day)]||[]).includes(habit.id)?1:0),0),
+    rate:days.length?Math.round(days.reduce((sum,day)=>sum+((completionHistory[dateKey(day)]||[]).includes(habit.id)?1:0),0)/days.length*100):0
+  }));
+  const categories=visible.reduce((map,habit)=>{
+    map[habit.category]=(map[habit.category]||0)+habitTotals.find(item=>item.id===habit.id).completed;
+    return map;
+  },{});
+  return {visible,dailyCounts,dailyRates,total,average,habitTotals,categories};
 }
 
 const IconMap = {
@@ -139,7 +171,7 @@ function MiniLine({ values = chartValues, color = "#6741f5" }) {
   </svg>;
 }
 
-function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, setView, onSelectDate, onReorderHabits }) {
+function Overview({ habits, completionHistory, today, openProgress, openAdd, onEdit, setView, onSelectDate, onReorderHabits }) {
   const visibleHabits=habits.filter(h=>!h.hidden);
   const completedHabits=visibleHabits.filter(h=>h.done);
   const done = completedHabits.length;
@@ -157,7 +189,7 @@ function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, se
     endDrag();
   };
   return <>
-    <PageTitle eyebrow={formatVietnameseDate(CURRENT_DATE,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate()} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
+    <PageTitle eyebrow={formatVietnameseDate(today,{weekday:"long",day:"numeric",month:"long"}).toUpperCase()} title={<>{greetingForDate(today)} <span>👋</span></>} text="Một ngày mới để bạn tiến gần hơn đến phiên bản tốt nhất." action={<button className="primary" onClick={openAdd}><Plus/> Thêm thói quen</button>}/>
     <section className="home-stack">
       <div className="today card">
         <SectionHead title={`${percent}% hoàn thành`} label="TIẾN ĐỘ HÔM NAY">
@@ -173,20 +205,20 @@ function Overview({ habits, completionHistory, openProgress, openAdd, onEdit, se
         <button className="add-row" onClick={()=>setView("Thói quen")}>Xem tất cả thói quen <ChevronRight/></button>
       </div>
     </section>
-    <ReportSummary habits={habits}/>
-    <CalendarMini setView={setView} onSelectDate={onSelectDate}/>
+    <ReportSummary habits={habits} completionHistory={completionHistory}/>
+    <CalendarMini today={today} setView={setView} onSelectDate={onSelectDate}/>
   </>;
 }
 
-function CalendarMini({ setView, onSelectDate }) {
-  const year=CURRENT_DATE.getFullYear();
-  const month=CURRENT_DATE.getMonth();
+function CalendarMini({ today, setView, onSelectDate }) {
+  const year=today.getFullYear();
+  const month=today.getMonth();
   const daysInMonth=new Date(year,month+1,0).getDate();
   const firstWeekday=(new Date(year,month,1).getDay()+6)%7;
   const dates=[...Array(daysInMonth)].map((_,index)=>new Date(year,month,index+1));
   return <div className="calendar compact card">
     <div className="compact-calendar-head">
-      <div className="compact-calendar-title"><span><CalendarDays/></span><div><small>LỊCH THÁNG</small><strong>{formatVietnameseDate(CURRENT_DATE,{month:"long",year:"numeric"})}</strong></div></div>
+      <div className="compact-calendar-title"><span><CalendarDays/></span><div><small>LỊCH THÁNG</small><strong>{formatVietnameseDate(today,{month:"long",year:"numeric"})}</strong></div></div>
       <button className="compact-calendar-link" onClick={()=>setView("Lịch")}>Xem đầy đủ <ChevronRight/></button>
     </div>
     <div className="compact-calendar-body">
@@ -224,14 +256,15 @@ function DayDetailView({ habits, completionHistory, day, onBack }) {
   </>;
 }
 
-function ReportSummary({ habits }) {
+function ReportSummary({ habits, completionHistory }) {
   const [report, setReport] = useState("Tuần");
+  const stats=historyStats(habits,completionHistory);
   return <section className="reports card">
     <SectionHead title="Báo cáo" label="PHÂN TÍCH TIẾN ĐỘ"><div className="tabs">{["Tuần","Tháng","Năm"].map(t=><button className={report===t?"selected":""} key={t} onClick={()=>setReport(t)}>{t}</button>)}</div></SectionHead>
     <div className="report-grid">
-      <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">0%</div><MiniLine values={[0,0,0,0,0,0,0]}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
-      <HabitBars habits={habits}/>
-      <CategoryDonut/>
+      <div className="report-card"><p>Tỷ lệ hoàn thành</p><div className="metric">{stats.average}%</div><MiniLine values={stats.dailyRates}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
+      <HabitBars habits={stats.habitTotals}/>
+      <CategoryDonut categories={stats.categories}/>
     </div>
   </section>;
 }
@@ -240,8 +273,10 @@ function HabitBars({ habits, title = "Hoàn thành theo thói quen" }) {
   return <div className="report-card"><p>{title}</p><div className="bars">{habits.slice(0,6).map(h=><div key={h.id}><span>{h.name}</span><i><em style={{width:`${h.rate}%`}}/></i><b>{h.rate}%</b></div>)}</div></div>;
 }
 
-function CategoryDonut() {
-  return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className="donut empty"/><div className="legend">{[["Sức khỏe","0%","blue"],["Học tập","0%","green"],["Phát triển","0%","orange"],["Công việc","0%","purple"],["Khác","0%","pink"]].map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
+function CategoryDonut({ categories = {} }) {
+  const total=Object.values(categories).reduce((sum,value)=>sum+value,0);
+  const rows=[["Sức khỏe","blue"],["Học tập","green"],["Phát triển bản thân","orange"],["Công việc","purple"],["Khác","pink"]].map(([name,color])=>[name,total?`${Math.round((categories[name]||0)/total*100)}%`:"0%",color]);
+  return <div className="report-card"><p>Phân bố theo danh mục</p><div className="donut-wrap"><div className={total?"donut":"donut empty"}/><div className="legend">{rows.map(x=><div key={x[0]}><i className={x[2]}/><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></div></div>;
 }
 
 function HabitsView({ habits, openAdd, onEdit, onProgress, onDelete, query = "" }) {
@@ -321,29 +356,37 @@ function CalendarView({ habits, completionHistory }) {
   </>;
 }
 
-function ReportsView({ habits }) {
+function ReportsView({ habits, completionHistory }) {
   const [period,setPeriod]=useState("Tuần");
+  const stats=historyStats(habits,completionHistory);
+  const topHabits=[...stats.habitTotals].sort((a,b)=>b.completed-a.completed).slice(0,3);
+  const improveHabits=[...stats.habitTotals].sort((a,b)=>a.rate-b.rate).slice(0,3);
   return <>
     <PageTitle title="Báo cáo" text="Bức tranh tổng quan về hành trình xây dựng thói quen." action={<div className="tabs">{["Tuần","Tháng","Năm","Tùy chỉnh"].map(x=><button onClick={()=>setPeriod(x)} className={period===x?"selected":""} key={x}>{x}</button>)}</div>}/>
     <section className="stats report-stats">
-      <StatCard label="Tỷ lệ hoàn thành trung bình" value="0%" sub=""/>
-      <StatCard label="Tổng thói quen hoàn thành" value="0" sub="lần"/>
+      <StatCard label="Tỷ lệ hoàn thành trung bình" value={`${stats.average}%`} sub="7 ngày gần đây"/>
+      <StatCard label="Tổng thói quen hoàn thành" value={stats.total} sub="lần"/>
     </section>
     <div className="report-grid standalone">
-      <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={[0,0,0,0,0,0,0]}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
-      <CategoryDonut/>
-      <div className="report-card card"><p>Thói quen hàng đầu</p><div className="ranking">{habits.slice(0,3).map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>0 ngày</strong></div>)}</div></div>
-      <div className="report-card card"><p>Thói quen cần cải thiện</p><div className="improve">{habits.slice(-3).map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></div>)}</div></div>
+      <div className="report-card card"><p>Tỷ lệ hoàn thành</p><MiniLine values={stats.dailyRates}/><div className="chart-labels">{week.map(x=><span key={x}>{x}</span>)}</div></div>
+      <CategoryDonut categories={stats.categories}/>
+      <div className="report-card card"><p>Thói quen hàng đầu</p><div className="ranking">{topHabits.map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{h.completed} ngày</strong></div>)}</div></div>
+      <div className="report-card card"><p>Thói quen cần cải thiện</p><div className="improve">{improveHabits.map(h=><div key={h.id}><HabitIcon habit={h}/><span>{h.name}</span><strong>{h.rate}%</strong><i><em style={{width:`${h.rate}%`}}/></i></div>)}</div></div>
     </div>
   </>;
 }
 
-function StatisticsView({ habits }) {
+function StatisticsView({ habits, completionHistory }) {
+  const stats=historyStats(habits,completionHistory);
+  const maxCount=Math.max(...stats.dailyCounts,1);
+  const timeRows=["Buổi sáng","Buổi chiều","Buổi tối","Trước khi ngủ"];
+  const timeTotals=timeRows.map(time=>stats.habitTotals.filter(h=>(h.times?.length?h.times:[`Buổi ${String(h.period||"").toLowerCase()}`]).includes(time)).reduce((sum,h)=>sum+h.completed,0));
+  const maxTime=Math.max(...timeTotals,1);
   return <>
     <PageTitle title="Thống kê" text="Phân tích chuyên sâu về nhịp độ và khung giờ hiệu quả." action={<div className="selects"><select defaultValue="all"><option value="all">Tất cả thói quen</option></select><select><option>30 ngày qua</option><option>7 ngày qua</option></select></div>}/>
     <div className="stats-grid">
-      <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{week.map((label,i)=><div key={label}><i style={{height:"0%"}}/><span>{week[i]}</span></div>)}</div></div>
-      <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{[...Array(28)].map((_,i)=><i style={{opacity:.08}} key={i}/>)}</div><div className="heat-label"><span>06:00</span><span>12:00</span><span>17:00</span><span>21:00</span></div></div>
+      <div className="report-card card"><p>Hoàn thành theo ngày trong tuần</p><div className="vertical-bars">{week.map((label,i)=><div key={label}><i style={{height:stats.total?`${Math.max(6,stats.dailyCounts[i]/maxCount*100)}%`:"0%"}}/><span>{label}</span></div>)}</div></div>
+      <div className="report-card card"><p>Hoàn thành theo khung giờ</p><div className="heatmap">{timeTotals.flatMap((total,row)=>[...Array(7)].map((_,col)=><i style={{opacity:Math.max(.08,total/maxTime)}} key={`${row}-${col}`}/>))}</div><div className="heat-label"><span>Sáng</span><span>Chiều</span><span>Tối</span><span>Ngủ</span></div></div>
     </div>
   </>;
 }
@@ -458,9 +501,9 @@ export default function Home() {
   const [mobile, setMobile] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
   const [editingGoal,setEditingGoal]=useState(null);
-  const [query,setQuery]=useState("");
   const [toast,setToast]=useState("");
   const [hydrated,setHydrated]=useState(false);
+  const [today,setToday]=useState(new Date());
   const [manualSyncStatus,setManualSyncStatus]=useState("");
   const [appsScriptReady,setAppsScriptReady]=useState(false);
   const appsScriptSnapshotRef=useRef(null);
@@ -479,8 +522,9 @@ export default function Home() {
         return value&&typeof value==="object"&&!Array.isArray(value)?value:fallback;
       } catch { return fallback; }
     };
+    const activeDate=localStorage.getItem("habitflow-active-date");
     const existingHabits=read("habitflow-habits",seedHabits);
-    const normalizedHabits=resetHabitRates(existingHabits);
+    const normalizedHabits=normalizeHabitsForToday(existingHabits,activeDate);
     if(localStorage.getItem("habitflow-sample-version")!==SAMPLE_VERSION){
       const ids=new Set(normalizedHabits.map(h=>h.id));
       setHabits([...normalizedHabits,...seedHabits.filter(h=>!ids.has(h.id))]);
@@ -488,12 +532,26 @@ export default function Home() {
     } else setHabits(normalizedHabits);
     const storedHistory=readObject("habitflow-completion-history",null);
     setCompletionHistory(storedHistory||{[dateKey()]:normalizedHabits.filter(h=>h.done).map(h=>h.id)});
+    localStorage.setItem("habitflow-active-date",dateKey());
     setGoals(read("habitflow-goals",goalsSeed));
     setNotes(read("habitflow-notes",notesSeed));
     localStorage.removeItem("habitflow-achievements");
     setTheme(localStorage.getItem("habitflow-theme")==="dark"?"dark":"light");
     setHydrated(true);
   }, []);
+  useEffect(() => {
+    const timer=setInterval(()=>setToday(new Date()),60000);
+    return()=>clearInterval(timer);
+  },[]);
+  useEffect(() => {
+    if(!hydrated)return;
+    const current=dateKey(today);
+    if(localStorage.getItem("habitflow-active-date")===current)return;
+    setHabits(currentHabits=>resetHabitsForNewDay(currentHabits));
+    setSelectedDay(new Date());
+    localStorage.setItem("habitflow-active-date",current);
+    notify("Đã bắt đầu ngày mới, tiến độ hôm nay đã được reset");
+  },[today,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-habits", JSON.stringify(habits)); }, [habits,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-completion-history", JSON.stringify(completionHistory)); }, [completionHistory,hydrated]);
   useEffect(() => { if(hydrated)localStorage.setItem("habitflow-goals", JSON.stringify(goals)); }, [goals,hydrated]);
@@ -514,13 +572,14 @@ export default function Home() {
 
         if(data){
           appsScriptSnapshotRef.current=JSON.stringify(data);
-          if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
+          localStorage.setItem("habitflow-active-date",dateKey());
+          if(Array.isArray(data.habits))setHabits(normalizeHabitsForToday(data.habits,data.activeDate));
           if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
           if(Array.isArray(data.goals))setGoals(data.goals);
           if(Array.isArray(data.notes))setNotes(data.notes);
           if(data.theme==="light"||data.theme==="dark")setTheme(data.theme);
         }else{
-          appsScriptSnapshotRef.current=JSON.stringify({version:1,habits,completionHistory,goals,notes,theme});
+          appsScriptSnapshotRef.current=JSON.stringify({version:1,activeDate:dateKey(today),habits,completionHistory,goals,notes,theme});
         }
 
         appsScriptDirtyRef.current=false;
@@ -539,7 +598,7 @@ export default function Home() {
   useEffect(() => {
     if(!hydrated||!appsScriptReady)return;
 
-    const data={version:1,habits,completionHistory,goals,notes,theme};
+    const data={version:1,activeDate:dateKey(today),habits,completionHistory,goals,notes,theme};
     const snapshot=JSON.stringify(data);
     if(snapshot===appsScriptSnapshotRef.current)return;
 
@@ -552,6 +611,7 @@ export default function Home() {
         await saveDataToGoogle(data);
         if(cancelled)return;
         appsScriptSnapshotRef.current=snapshot;
+        localStorage.setItem("habitflow-active-date",dateKey(today));
         appsScriptDirtyRef.current=false;
         setManualSyncStatus("synced");
       }catch(error){
@@ -565,7 +625,7 @@ export default function Home() {
       cancelled=true;
       clearTimeout(timer);
     };
-  },[habits,completionHistory,goals,notes,theme,hydrated,appsScriptReady]);
+  },[habits,completionHistory,goals,notes,theme,today,hydrated,appsScriptReady]);
   useEffect(() => {
     if(!hydrated||!appsScriptReady)return;
 
@@ -579,7 +639,8 @@ export default function Home() {
         if(snapshot===appsScriptSnapshotRef.current)return;
 
         appsScriptSnapshotRef.current=snapshot;
-        if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
+        localStorage.setItem("habitflow-active-date",dateKey());
+        if(Array.isArray(data.habits))setHabits(normalizeHabitsForToday(data.habits,data.activeDate));
         if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
         if(Array.isArray(data.goals))setGoals(data.goals);
         if(Array.isArray(data.notes))setNotes(data.notes);
@@ -614,9 +675,10 @@ export default function Home() {
   const backupToAppsScript=async()=>{
     setManualSyncStatus("saving");
     try{
-      const data={version:1,habits,completionHistory,goals,notes,theme};
+      const data={version:1,activeDate:dateKey(today),habits,completionHistory,goals,notes,theme};
       await saveDataToGoogle(data);
       appsScriptSnapshotRef.current=JSON.stringify(data);
+      localStorage.setItem("habitflow-active-date",dateKey(today));
       appsScriptDirtyRef.current=false;
       setManualSyncStatus("synced");
       notify("Đã sao lưu qua Google Apps Script");
@@ -636,8 +698,9 @@ export default function Home() {
         return;
       }
       appsScriptSnapshotRef.current=JSON.stringify(data);
+      localStorage.setItem("habitflow-active-date",dateKey());
       appsScriptDirtyRef.current=false;
-      if(Array.isArray(data.habits))setHabits(resetHabitRates(data.habits));
+      if(Array.isArray(data.habits))setHabits(normalizeHabitsForToday(data.habits,data.activeDate));
       if(data.completionHistory&&typeof data.completionHistory==="object"&&!Array.isArray(data.completionHistory))setCompletionHistory(data.completionHistory);
       if(Array.isArray(data.goals))setGoals(data.goals);
       if(Array.isArray(data.notes))setNotes(data.notes);
@@ -707,6 +770,7 @@ export default function Home() {
     setCompletionHistory({[dateKey()]:seedHabits.filter(h=>h.done).map(h=>h.id)});
     localStorage.setItem("habitflow-sample-version",SAMPLE_VERSION);
     localStorage.setItem("habitflow-reset-version",RESET_VERSION);
+    localStorage.setItem("habitflow-active-date",dateKey());
     notify("Đã khôi phục dữ liệu mẫu");
   };
   const selectDate=day=>{setSelectedDay(day);setView("Chi tiết ngày")};
@@ -723,13 +787,13 @@ export default function Home() {
   const deleteGoal=id=>{setGoals(goals.filter(g=>g.id!==id));notify("Đã xóa mục tiêu")};
 
   let content;
-  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate} onReorderHabits={reorderHabits}/>;
+  if(view==="Tổng quan") content=<Overview habits={habits} completionHistory={completionHistory} today={today} openProgress={setProgressHabit} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} setView={setView} onSelectDate={selectDate} onReorderHabits={reorderHabits}/>;
   else if(view==="Chi tiết ngày") content=<DayDetailView habits={habits} completionHistory={completionHistory} day={selectedDay} onBack={()=>setView("Tổng quan")}/>;
-  else if(view==="Thói quen") content=<HabitsView habits={habits} query={query} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
+  else if(view==="Thói quen") content=<HabitsView habits={habits} openAdd={()=>{setEditingHabit(null);setView("Thêm thói quen")}} onEdit={habit=>{setEditingHabit(habit);setView("Thêm thói quen")}} onProgress={setProgressHabit} onDelete={deleteHabit}/>;
   else if(view==="Thêm thói quen") content=<AddHabitView onBack={()=>{setEditingHabit(null);setView("Thói quen")}} onSave={saveHabit} initialHabit={editingHabit}/>;
   else if(view==="Lịch") content=<CalendarView habits={habits} completionHistory={completionHistory}/>;
-  else if(view==="Báo cáo") content=<ReportsView habits={habits}/>;
-  else if(view==="Thống kê") content=<StatisticsView habits={habits}/>;
+  else if(view==="Báo cáo") content=<ReportsView habits={habits} completionHistory={completionHistory}/>;
+  else if(view==="Thống kê") content=<StatisticsView habits={habits} completionHistory={completionHistory}/>;
   else if(view==="Mục tiêu") content=<GoalsView goals={goals} openGoal={()=>{setEditingGoal(null);setGoalModal(true)}} onEdit={goal=>{setEditingGoal(goal);setGoalModal(true)}} onDelete={deleteGoal}/>;
   else if(view==="Ghi chú") content=<NotesView notes={notes} setNotes={setNotes} notify={notify}/>;
   else content=<SettingsView resetData={resetData} notify={notify} theme={theme} toggleTheme={()=>{setTheme(theme==="dark"?"light":"dark");notify(theme==="dark"?"Đã chuyển sang giao diện sáng":"Đã chuyển sang giao diện tối")}} manualSync={{status:manualSyncStatus,backup:backupToAppsScript,restore:restoreFromAppsScript}}/>;
@@ -743,7 +807,6 @@ export default function Home() {
     <main>
       <header>
         <button aria-label="Mở menu" className="menu-btn" onClick={()=>setMobile(true)}><Menu/></button>
-        <div className="search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&setView("Thói quen")} placeholder="Tìm thói quen..."/>{query&&<button aria-label="Xóa tìm kiếm" onClick={()=>setQuery("")}><X/></button>}</div>
       </header>
       <div className="view-shell">{content}</div>
     </main>
